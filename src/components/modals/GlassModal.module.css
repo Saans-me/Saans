@@ -1,0 +1,160 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.scrim {
+  white-space: nowrap;
+  position: absolute;
+  inset: 0;
+  border: none;
+  cursor: default;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--primary) 26%, transparent), color-mix(in srgb, var(--deep) 34%, transparent) 60%, color-mix(in srgb, var(--soft2) 30%, transparent));
+  -webkit-backdrop-filter: blur(12px) saturate(1.3);
+  backdrop-filter: blur(12px) saturate(1.3);
+}
+.scrimHelp {
+  background: linear-gradient(160deg, color-mix(in srgb, var(--primary) 26%, transparent), color-mix(in srgb, var(--deep) 40%, transparent) 60%, color-mix(in srgb, var(--soft2) 30%, transparent));
+}
+
+.blobA, .blobB {
+  position: absolute;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.blobA {
+  left: 12%;
+  top: 10%;
+  width: min(46vw, 460px);
+  background: radial-gradient(circle, var(--accent), var(--primary));
+  filter: blur(80px);
+  opacity: .45;
+  animation: var(--kf-mote) 12s ease-in-out infinite;
+}
+.blobB {
+  right: 10%;
+  bottom: 8%;
+  width: min(40vw, 400px);
+  background: var(--soft2);
+  filter: blur(90px);
+  opacity: .55;
+  animation: var(--kf-mote) 14s ease-in-out -5s infinite;
+}
+/* Breath pop-up: flat accent blob, slightly smaller and further in */
+.blobFlat { left: 14%; top: 12%; width: min(46vw, 440px); background: var(--accent); opacity: .5 }
+.blobFlat ~ .blobB { right: 12%; bottom: 10%; width: min(40vw, 380px) }
+
+/* Dark theme: --primary/--accent are light lavenders here, so the light-theme recipe
+   would wash the screen out. Darken the scrim and keep the glows subtle. */
+:global([data-theme="dark"]) .scrim {
+  background: linear-gradient(160deg, color-mix(in srgb, var(--bg) 62%, transparent), color-mix(in srgb, var(--deep) 58%, transparent) 60%, color-mix(in srgb, var(--bg) 66%, transparent));
+}
+:global([data-theme="dark"]) .blobA { opacity: .18 }
+:global([data-theme="dark"]) .blobB { opacity: .3 }
+
+.card { position: relative }
+
+.dark {
+  width: min(100%, 900px);
+  max-height: min(calc(100dvh - 24px), 860px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  border-radius: clamp(26px, 3vw, 36px);
+  color: var(--on-deep);
+  background:
+    linear-gradient(155deg, color-mix(in srgb, var(--accent) 22%, transparent) 0%, transparent 38%),
+    linear-gradient(330deg, color-mix(in srgb, var(--soft2) 16%, transparent) 0%, transparent 40%),
+    color-mix(in srgb, var(--deep) 74%, transparent);
+  -webkit-backdrop-filter: blur(32px) saturate(1.6);
+  backdrop-filter: blur(32px) saturate(1.6);
+  border: 1px solid color-mix(in srgb, var(--on-deep) 22%, transparent);
+  box-shadow: 0 50px 120px -40px rgba(10,8,18,.6), inset 0 1px 0 color-mix(in srgb, var(--on-deep) 28%, transparent);
+}
+
+.light {
+  border-radius: 36px;
+  color: var(--text);
+  background:
+    linear-gradient(155deg, color-mix(in srgb, var(--accent) 28%, transparent) 0%, transparent 45%),
+    linear-gradient(330deg, color-mix(in srgb, var(--soft2) 40%, transparent) 0%, transparent 45%),
+    color-mix(in srgb, var(--surface) 55%, transparent);
+  -webkit-backdrop-filter: blur(30px) saturate(1.7);
+  backdrop-filter: blur(30px) saturate(1.7);
+}
+
+:global([data-theme="dark"]) .dark {
+  background:
+    linear-gradient(155deg, color-mix(in srgb, var(--accent) 9%, transparent) 0%, transparent 38%),
+    linear-gradient(330deg, color-mix(in srgb, var(--soft2) 16%, transparent) 0%, transparent 40%),
+    color-mix(in srgb, var(--deep) 82%, transparent);
+  border-color: color-mix(in srgb, var(--on-deep) 14%, transparent);
+}
+:global([data-theme="dark"]) .light {
+  background:
+    linear-gradient(155deg, color-mix(in srgb, var(--accent) 12%, transparent) 0%, transparent 45%),
+    linear-gradient(330deg, color-mix(in srgb, var(--soft2) 40%, transparent) 0%, transparent 45%),
+    color-mix(in srgb, var(--surface) 72%, transparent);
+}
+
+.plain {
+  width: 100%;
+  max-width: 540px;
+  max-height: 90dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--surface);
+  border-radius: 32px;
+  padding: clamp(24px, 4vw, 36px);
+  box-shadow: 0 40px 100px -40px var(--shadow);
+}
+
+.panelCloseBar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  justify-content: flex-end;
+  padding: 14px 14px 0;
+  pointer-events: none;
+}
+.panelClose {
+  white-space: nowrap;
+  pointer-events: auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--on-deep) 22%, transparent);
+  background: color-mix(in srgb, var(--on-deep) 12%, transparent);
+  color: var(--on-deep);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  transition: transform .5s var(--ease);
+}
+.panelClose:hover { transform: rotate(90deg) }
+
+.glassClose {
+  white-space: nowrap;
+  position: absolute;
+  z-index: 2;
+  top: 14px;
+  right: 14px;
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--text) 12%, transparent);
+  background: color-mix(in srgb, var(--surface) 60%, transparent);
+  color: var(--text);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: transform .5s var(--ease);
+}
+.glassClose:hover { transform: rotate(90deg) }
+.still, .still:hover { transform: none; transition: none }

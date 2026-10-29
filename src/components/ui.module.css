@@ -1,0 +1,32 @@
+/* Shared section scaffolding used across the landing page */
+
+.section {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: clamp(56px, 7vw, 96px) clamp(16px, 3vw, 32px) 0;
+  scroll-margin-top: 88px;
+}
+
+.eyebrow {
+  margin: 0 0 14px;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  color: var(--text2);
+  white-space: nowrap;
+}
+
+.h2 {
+  margin: 0;
+  font-weight: 700;
+  font-size: clamp(30px, 3.8vw, 48px);
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+.arrowBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}

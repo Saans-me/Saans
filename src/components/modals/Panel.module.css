@@ -1,0 +1,71 @@
+/* Shared building blocks for the dark glass panels (Care, Privacy, For, How) */
+
+.body {
+  padding: 0 clamp(20px, 4vw, 48px) clamp(28px, 4vw, 48px);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(32px, 4vw, 48px);
+}
+.bodyRoomy { gap: clamp(44px, 5vw, 72px) }
+
+.eyebrow { margin: 0 0 12px; font-size: 12px; font-weight: 700; letter-spacing: .14em; color: var(--on-deep2); white-space: nowrap }
+.eyebrowLg { margin: 0 0 14px; font-size: 12.5px }
+
+.h2 { margin: 0 0 12px; font-weight: 700; font-size: clamp(28px, 3.6vw, 42px); line-height: 1.08; letter-spacing: -0.035em; text-wrap: balance }
+.h2Lg { margin-bottom: 18px; line-height: 1.05 }
+.lead { margin: 0; font-size: 16px; line-height: 1.65; color: var(--on-deep2); text-wrap: pretty }
+.leadLg { font-size: clamp(16px, 1.4vw, 18px); line-height: 1.7 }
+.muted { color: var(--on-deep2) }
+
+.h3 { margin: 0 0 18px; font-weight: 700; font-size: clamp(20px, 2.2vw, 26px); line-height: 1.15; letter-spacing: -0.03em }
+
+.tile {
+  background: color-mix(in srgb, var(--on-deep) 7%, transparent);
+  border: 1px solid color-mix(in srgb, var(--on-deep) 12%, transparent);
+  /* radius set by each use (22px tiles, 16px rows, 999px pills) */
+}
+.tileHover { transition: background .4s ease }
+.tileHover:hover { background: color-mix(in srgb, var(--on-deep) 12%, transparent) }
+
+.chip {
+  padding: 8px 15px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--on-deep) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--on-deep) 14%, transparent);
+  font-weight: 700;
+  font-size: 13.5px;
+}
+
+.accentBtn, .ghostBtn {
+  white-space: nowrap;
+  align-self: flex-start;
+  min-height: 50px;
+  padding: 0 22px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.accentBtn { border: none; background: var(--accent); color: #2A2440; transition: transform .5s var(--ease) }
+.accentBtn:hover { transform: translateY(-2px) }
+.ghostBtn { border: 1.5px solid var(--on-deep2); background: transparent; color: var(--on-deep); transition: background .45s var(--ease) }
+.ghostBtn:hover { background: color-mix(in srgb, var(--on-deep) 12%, transparent) }
+
+.divider { border-top: 1px solid color-mix(in srgb, var(--on-deep) 16%, transparent) }
+
+/* Light "app preview" card shown inside the dark panels */
+.preview {
+  width: 100%;
+  justify-self: center;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  text-align: left;
+}
+.previewHead { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--border); background: var(--surface) }
+.previewHead strong { flex: 1; letter-spacing: -0.01em }
+.previewBadge { white-space: nowrap; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border); font-size: 11px; font-weight: 700; color: var(--text2) }

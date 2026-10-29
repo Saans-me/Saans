@@ -1,0 +1,161 @@
+.section { padding: 0 clamp(12px, 2vw, 24px); scroll-margin-top: 88px }
+
+.panel {
+  max-width: 1400px;
+  margin: 0 auto;
+  background: var(--soft1);
+  border-radius: clamp(26px, 4vw, 40px);
+  padding: clamp(40px, 6vw, 80px) clamp(20px, 5vw, 72px);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr));
+  gap: clamp(40px, 5vw, 72px);
+  align-items: center;
+  overflow: hidden;
+}
+
+.copy { display: flex; flex-direction: column; align-items: flex-start; gap: 22px; min-width: 0 }
+
+.steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 440px }
+.steps li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 18px 10px 10px;
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: 0 12px 30px -24px var(--shadow);
+}
+.steps strong { flex: 1; font-size: 15.5px; letter-spacing: -0.01em }
+.stepIcon { width: 40px; height: 40px; border-radius: 50%; flex: none; background: var(--soft1); color: var(--primary); display: grid; place-items: center }
+.stepNum { font-weight: 700; font-size: 12.5px; color: var(--text2) }
+
+.cta {
+  white-space: nowrap;
+  min-height: 50px;
+  padding: 0 24px;
+  border-radius: 999px;
+  border: none;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  transition: transform .5s var(--ease), box-shadow .5s var(--ease);
+}
+.cta:hover { transform: translateY(-2px); box-shadow: 0 14px 30px -12px var(--shadow) }
+
+/* ---------- Floating stage (≥640px) ---------- */
+.stage { position: relative; min-height: clamp(380px, 38vw, 460px); min-width: 0 }
+
+.callCard {
+  position: absolute;
+  top: 6%;
+  right: 0;
+  width: min(76%, 330px);
+  rotate: 4deg;
+  background: var(--deep);
+  color: var(--on-deep);
+  border-radius: 28px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 40px 70px -40px rgba(10,8,18,.55);
+}
+.modes { display: flex; gap: 2px; padding: 4px; border-radius: 999px; background: color-mix(in srgb, var(--on-deep) 10%, transparent) }
+.modes span { flex: 1; text-align: center; padding: 6px 8px; color: var(--on-deep2); font-weight: 700; font-size: 12px; white-space: nowrap }
+.modes .modeOn { border-radius: 999px; background: var(--surface); color: var(--text) }
+.screen { height: 170px; position: relative; border-radius: 18px; background: color-mix(in srgb, var(--on-deep) 8%, transparent); display: grid; place-items: center }
+.screenOrb {
+  width: 68px; height: 68px; border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 10px color-mix(in srgb, var(--accent) 18%, transparent);
+  animation: var(--kf-breathe) 6s ease-in-out infinite;
+}
+.pip { position: absolute; right: 10px; top: 10px; width: 42px; height: 56px; border-radius: 12px; background: var(--soft2) }
+.controls { position: absolute; left: 0; right: 0; bottom: 10px; display: flex; justify-content: center; gap: 8px }
+.controls span { width: 28px; height: 28px; border-radius: 50%; background: color-mix(in srgb, var(--on-deep) 18%, transparent) }
+.controls .hangup { background: #FF5E00 }
+
+.profileFloat { position: absolute; left: 0; top: 34%; width: min(84%, 350px); rotate: -3deg; animation: var(--kf-float) 7s ease-in-out infinite }
+
+.profile {
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 26px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 40px 80px -40px var(--shadow);
+  border: 1px solid var(--border);
+}
+.profileTop { display: flex; align-items: center; gap: 12px }
+.initials { flex: none; width: 46px; height: 46px; border-radius: 50%; background: var(--soft2); display: grid; place-items: center; font-weight: 700; font-size: 15px }
+.profileWho { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.35 }
+.profileWho strong { font-size: 15px }
+.profileWho span { font-size: 12.5px; color: var(--text2) }
+.tick { flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--primary); color: var(--on-primary); display: grid; place-items: center }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; font-weight: 700 }
+.tags span { padding: 5px 10px; border-radius: 999px; background: var(--soft1) }
+.profileFoot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 10px; border-top: 1px solid var(--border) }
+.where { font-size: 12.5px; color: var(--text2); white-space: nowrap }
+.book { padding: 8px 14px; border-radius: 999px; background: var(--primary); color: var(--on-primary); font-weight: 700; font-size: 12.5px; white-space: nowrap }
+
+.notesChip, .confirmChip {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 20px 40px -20px var(--shadow);
+}
+.notesChip {
+  left: 10px;
+  top: 20px;
+  padding: 8px 14px 8px 8px;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: 13px;
+  animation: var(--kf-float) 6s ease-in-out -3s infinite;
+}
+.chipIcon { width: 28px; height: 28px; border-radius: 50%; background: color-mix(in srgb, var(--on-primary) 18%, transparent); display: grid; place-items: center }
+.confirmChip {
+  left: 290px;
+  top: 373px;
+  padding: 8px 16px 8px 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13.5px;
+  border: 1px solid var(--border);
+  animation: var(--kf-float) 5s ease-in-out -1.5s infinite;
+}
+.okIcon { width: 28px; height: 28px; border-radius: 50%; background: #3FA37A; color: #fff; display: grid; place-items: center }
+
+/* ---------- Phone stack (<640px) ---------- */
+.phoneStack { display: none; flex-direction: column; gap: 12px; min-width: 0 }
+.phoneChips { display: flex; flex-wrap: wrap; gap: 8px }
+.phoneNotes, .phoneConfirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px 8px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.phoneNotes { background: var(--primary); color: var(--on-primary) }
+.phoneConfirm { background: var(--surface); border: 1px solid var(--border); color: var(--text) }
+.phoneChipIcon { width: 26px; height: 26px; border-radius: 50%; background: color-mix(in srgb, var(--on-primary) 18%, transparent); display: grid; place-items: center }
+.phoneOk { width: 26px; height: 26px; border-radius: 50%; background: #3FA37A; color: #fff; display: grid; place-items: center }
+
+@media (max-width: 639.98px) {
+  .stage { display: none }
+  .phoneStack { display: flex }
+}

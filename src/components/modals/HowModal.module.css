@@ -1,0 +1,22 @@
+.features { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 28px 40px }
+.feature { padding-top: 20px; display: flex; flex-direction: column; gap: 8px }
+.num { font-weight: 700; font-size: clamp(36px, 4vw, 48px); line-height: 1; letter-spacing: -0.04em; color: var(--accent) }
+.h3 { margin: 8px 0 0; font-weight: 700; font-size: 21px; letter-spacing: -0.02em }
+.body { margin: 0; color: var(--on-deep2); line-height: 1.65; font-size: 15.5px; text-wrap: pretty }
+
+.tools {
+  background: color-mix(in srgb, var(--on-deep) 7%, transparent);
+  border-radius: 32px;
+  padding: clamp(24px, 3.4vw, 40px);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px 40px;
+  align-items: center;
+}
+.toolsCopy { flex: 1 1 260px; display: flex; flex-direction: column; gap: 6px }
+.toolsTitle { margin: 0; font-weight: 700; font-size: clamp(22px, 2.4vw, 28px); letter-spacing: -0.03em }
+.toolsBody { margin: 0; color: var(--on-deep2); line-height: 1.6 }
+.toolList { flex: 2 1 380px; list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px }
+.toolList li { padding: 10px 16px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--on-deep) 16%, transparent); font-weight: 700; font-size: 14px }
+
+.actions { display: flex; flex-wrap: wrap; gap: 12px }
