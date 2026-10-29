@@ -15,7 +15,7 @@ and a phone-first bottom dock.
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript&logoColor=white)
 ![CSS Modules](https://img.shields.io/badge/CSS-Modules-1572b6?logo=css3)
 
-<img src="docs/screenshots/hero-light.png" alt="saans hero section in light mode" width="900" />
+<img src="image-1793292419450" alt="saans hero section in light mode" width="900" />
 
 </div>
 
