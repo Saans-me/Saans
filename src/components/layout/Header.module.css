@@ -1,0 +1,154 @@
+/* README §6 — floating glass pill */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 70;
+  padding: 12px clamp(10px, 2.4vw, 24px) 0;
+  pointer-events: none;
+}
+/* On Home the header floats over the hero (the hero adds 76px of top padding). */
+.onHome { margin-bottom: -76px; }
+
+.pill {
+  pointer-events: auto;
+  max-width: 1180px;
+  margin: 0 auto;
+  height: 64px;
+  padding: 0 8px 0 clamp(14px, 2vw, 20px);
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  border: 1px solid var(--border);
+  box-shadow: 0 20px 50px -30px var(--shadow);
+}
+.logo { margin-right: auto; }
+
+
+.nav { display: flex; align-items: center; gap: 2px; }
+.navLink {
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 15px;
+  text-decoration: none;
+  white-space: nowrap;
+  color: var(--text2);
+  transition: background .3s ease, color .3s ease;
+}
+.navLink:hover { background: var(--chip); color: var(--text); }
+.navCur { color: var(--text); }
+
+.right {
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.iconBtn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  flex: none;
+  transition: background .3s ease;
+}
+.iconBtn:hover { background: var(--chip); }
+.iconBtn > span { display: grid; place-items: center; }
+
+/* Theme icon: sun in dark, moon in light. Driven by <html data-theme> (no hydration flash). */
+.moonIcon { display: none !important; }
+:global([data-theme="light"]) .sunIcon { display: none !important; }
+:global([data-theme="light"]) .moonIcon { display: grid !important; }
+
+.helpBtn {
+  white-space: nowrap;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1.5px solid color-mix(in srgb, var(--text) 24%, transparent);
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 14.5px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: background .3s ease;
+}
+.helpBtn:hover { background: var(--chip); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: #FF5E00; }
+
+.joinBtn {
+  white-space: nowrap;
+  height: 44px;
+  padding: 0 20px;
+  border-radius: 999px;
+  border: none;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 14.5px;
+  cursor: pointer;
+  transition: transform .5s cubic-bezier(.22, 1, .36, 1);
+}
+.joinBtn:hover { transform: translateY(-1px); }
+
+/* < 1080px: logo, Get help, menu button */
+.narrowOnly { display: none; }
+@media (max-width: 1079px) {
+  .nav, .wideOnly { display: none; }
+  .narrowOnly { display: grid; }
+}
+
+/* ---------- Mobile menu sheet ---------- */
+.menu {
+  position: fixed;
+  z-index: 65;
+  inset: 88px 0 0 0;
+  background: color-mix(in srgb, var(--bg) 94%, transparent);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  overflow-y: auto;
+  padding: 16px clamp(20px, 5vw, 40px) calc(28px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+}
+@media (min-width: 1080px) { .menu { display: none; } }
+.menuNav { display: flex; flex-direction: column; }
+.menuLink {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: clamp(24px, 6vw, 30px);
+  letter-spacing: -0.02em;
+  color: var(--text);
+  text-decoration: none;
+}
+.menuLink:hover { color: var(--text); }
+.menuTheme {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 0;
+}
+.menuTheme > span { font-weight: 700; color: var(--text2); }
+.menuFoot { margin-top: auto; padding-top: 16px; }

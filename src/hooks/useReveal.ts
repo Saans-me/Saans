@@ -1,134 +1,181 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
+import { prefersReducedMotion } from "./useMediaQuery";
 
 const EASE = "cubic-bezier(.22,1,.36,1)";
 
-type Frames = Keyframe[];
-const KEYS: Record<string, Frames> = {
-  up: [{ opacity: 0, transform: "translateY(44px) scale(.97)", filter: "blur(8px)" }, { opacity: 1, transform: "none", filter: "blur(0)" }],
-  scale: [{ opacity: 0, transform: "translateY(40px) scale(.92)", filter: "blur(10px)" }, { opacity: 1, transform: "none", filter: "blur(0)" }],
-  line: [{ opacity: 0, transform: "translateY(24px)", clipPath: "inset(0 100% 0 0)" }, { opacity: 1, transform: "translateY(0)", clipPath: "inset(0 0% 0 0)" }],
-};
-
-export const prefersReducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
-/** Touch screens and small viewports skip blur filters and use shorter durations. */
-export const isLite = () => matchMedia("(pointer: coarse)").matches || innerWidth < 760;
-
-/**
- * Entrance motion: `[data-hero]` elements rise in on load, `[data-reveal]` elements
- * (up | scale | line) animate in once when they scroll into view.
- */
-export function useReveal() {
-  useEffect(() => {
-    if (prefersReducedMotion() || typeof IntersectionObserver === "undefined") return;
-    const lite = isLite();
-    const nb = (f: Frames) => (lite ? f.map(k => { const c = { ...k }; delete c.filter; return c; }) : f);
-
-    document.querySelectorAll<HTMLElement>("[data-hero]").forEach((el, i) => {
-      el.animate(nb([{ opacity: 0, transform: "translateY(32px)" }, { opacity: 1, transform: "translateY(0)" }]), {
-        duration: 900, delay: 80 + i * 110, easing: EASE, fill: "backwards",
-      });
-    });
-
-    const els = Array.from(document.querySelectorAll<HTMLElement>("[data-reveal]"));
-    els.forEach(el => {
-      if (el.getBoundingClientRect().top > innerHeight * 0.95) el.style.opacity = "0";
-      else el.dataset.revealed = "1";
-    });
-
-    // Bento extras: pattern bars grow, chat bubbles pop in one by one.
-    const extras = (el: HTMLElement) => {
-      if (el.dataset.bars) {
-        el.querySelectorAll<HTMLElement>("[data-bar]").forEach((b, k) => {
-          b.animate([{ transform: "scaleY(0)", opacity: 0 }, { transform: "scaleY(1)" }], { duration: 900, delay: 200 + k * 70, easing: EASE, fill: "backwards" });
-        });
-      }
-      el.querySelectorAll<HTMLElement>("[data-chat] > div").forEach((m, k) => {
-        m.animate([{ opacity: 0, transform: "translateY(16px) scale(.94)" }, { opacity: 1, transform: "none" }], { duration: 700, delay: 300 + k * 260, easing: EASE, fill: "backwards" });
-      });
-    };
-
-    const io = new IntersectionObserver(entries => entries.forEach(e => {
-      if (!e.isIntersecting) return;
-      const el = e.target as HTMLElement;
-      io.unobserve(el);
-      if (el.dataset.revealed) return;
-      el.dataset.revealed = "1";
-      el.animate(nb(KEYS[el.dataset.reveal || "up"] || KEYS.up), {
-        duration: lite ? 800 : 1050,
-        delay: Math.min(240, (+(el.dataset.revealDelay || 0)) * 0.7),
-        easing: EASE,
-        fill: "backwards",
-      });
-      el.style.opacity = "";
-      extras(el);
-    }), { rootMargin: "0px 0px -8% 0px", threshold: 0 });
-    els.forEach(el => io.observe(el));
-
-    return () => {
-      io.disconnect();
-      els.forEach(el => { el.style.opacity = ""; });
-    };
-  }, []);
+/* ------------------------------------------------------------------------ */
+/* Count-up: any [data-count] element whose text is a number ("84.5%",       */
+/* "4,212", "10+", "118") counts from 0 to its own value when revealed.      */
+/* ------------------------------------------------------------------------ */
+function countUp(el: HTMLElement, delay: number) {
+  const text = (el.dataset.countFinal ??= el.textContent ?? "");
+  const m = text.match(/^(\D*?)(\d[\d,]*(?:\.\d+)?)(.*)$/);
+  if (!m) return;
+  const [, prefix, num, suffix] = m;
+  const target = parseFloat(num.replace(/,/g, ""));
+  const decimals = (num.split(".")[1] || "").length;
+  const grouped = num.includes(",");
+  const fmt = (v: number) => {
+    const s = grouped
+      ? v.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
+      : v.toFixed(decimals);
+    return prefix + s + suffix;
+  };
+  // Lock the width so surrounding layout doesn't shift while counting.
+  el.style.minWidth = `${el.getBoundingClientRect().width}px`;
+  el.style.display ||= "inline-block";
+  el.textContent = fmt(0);
+  const dur = 1500;
+  let start = 0;
+  const step = (t: number) => {
+    if (!start) start = t;
+    const p = Math.min(1, (t - start) / dur);
+    const eased = 1 - Math.pow(1 - p, 3);
+    el.textContent = p >= 1 ? text : fmt(target * eased);
+    if (p < 1) requestAnimationFrame(step);
+  };
+  setTimeout(() => requestAnimationFrame(step), delay);
 }
 
-type Item = { el: HTMLElement; kind: string; k: number; cur: number; tgt: number };
+/** Extras that play inside a block when it reveals. */
+function playExtras(el: HTMLElement, d: number) {
+  // Lines draw in.
+  el.querySelectorAll("[data-draw]").forEach((p, i) =>
+    p.animate([{ strokeDashoffset: 100 }, { strokeDashoffset: 0 }], {
+      duration: 1300,
+      delay: d + 300 + i * 220,
+      easing: EASE,
+      fill: "backwards",
+    }),
+  );
+  // Bars grow: data-grow="x" (wipe in from the left) or "y" (rise from the bottom).
+  el.querySelectorAll<HTMLElement>("[data-grow]").forEach((g, i) => {
+    const x = g.dataset.grow === "x";
+    g.animate(
+      x
+        ? [{ clipPath: "inset(0 100% 0 0 round 12px)" }, { clipPath: "inset(0 0 0 0 round 0px)" }]
+        : [{ transform: "scaleY(0)", transformOrigin: "50% 100%" }, { transform: "scaleY(1)", transformOrigin: "50% 100%" }],
+      { duration: x ? 1500 : 900, delay: d + 250 + i * 45, easing: EASE, fill: "backwards" },
+    );
+  });
+  // Numbers count up.
+  const counts = [...(el.matches("[data-count]") ? [el] : []), ...el.querySelectorAll<HTMLElement>("[data-count]")];
+  counts.forEach((c) => countUp(c, d + 200));
+}
 
 /**
- * Scroll-linked motion, lerped for smoothness. Uses the individual `translate` /
- * `scale` properties so it composes with CSS animations on `transform`.
- *  - `data-parallax="0.03"`: light vertical drift around the viewport centre
- *  - `data-scroll="hero"`: hero panel shrinks/fades slightly as you scroll away
- *  - `data-scroll="grow"`: grows from .96 to 1 as it enters
+ * README §11 + extra motion. Observes every `[data-reveal]` element on the page.
+ *   data-reveal="up"    translateY(28px) → 0   (headings also un-blur)
+ *   data-reveal="scale" translateY(36px) scale(.96) → none
+ *   data-reveal="fade"  opacity only
+ *   data-reveal-delay="160" (ms)
+ * Inside a revealed block: [data-draw] paths draw in, [data-grow] bars grow,
+ * [data-count] numbers count up. Elements already on screen at load are not animated.
+ * Also: [data-parallax="0.1"] elements drift with scroll, and <main> fades in on route change.
  */
-export function useParallax() {
+export function useReveal() {
+  const pathname = usePathname();
+  const first = useRef(true);
+
   useEffect(() => {
-    if (prefersReducedMotion()) return;
-    const items: Item[] = [];
-    document.querySelectorAll<HTMLElement>("[data-parallax]").forEach(el => items.push({ el, kind: "px", k: +(el.dataset.parallax || 0), cur: 0, tgt: 0 }));
-    document.querySelectorAll<HTMLElement>("[data-scroll]").forEach(el => items.push({ el, kind: el.dataset.scroll || "", k: 0, cur: 0, tgt: 0 }));
-    const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+    const reduced = prefersReducedMotion();
 
-    const measure = () => {
-      const vh = innerHeight, small = innerWidth < 700;
-      items.forEach(it => {
-        const r = it.el.getBoundingClientRect();
-        if (it.kind === "px") { const top = r.top - it.cur; it.tgt = clamp((top + r.height / 2 - vh / 2) * it.k * (small ? .5 : 1), -90, 90); }
-        else if (it.kind === "hero") it.tgt = clamp(scrollY / (vh * 0.9), 0, 1);
-        else it.tgt = clamp((vh - r.top) / (vh * 0.75), 0, 1);
+    // Page transition on client-side navigation (the first load has its own intro).
+    if (!first.current && !reduced) {
+      document
+        .getElementById("main")
+        ?.animate([{ opacity: 0, transform: "translateY(14px)" }, { opacity: 1, transform: "none" }], {
+          duration: 650,
+          easing: EASE,
+        });
+    }
+    first.current = false;
+
+    if (reduced || typeof IntersectionObserver === "undefined") return;
+
+    const io = new IntersectionObserver(
+      (entries) =>
+        entries.forEach((en) => {
+          if (!en.isIntersecting) return;
+          const el = en.target as HTMLElement;
+          io.unobserve(el);
+          const d = +(el.getAttribute("data-reveal-delay") || 0);
+          const k = el.getAttribute("data-reveal");
+          const heading = /^H[1-3]$/.test(el.tagName);
+          el.style.opacity = "";
+          const from: Keyframe =
+            k === "scale"
+              ? { opacity: 0, transform: "translateY(36px) scale(.96)" }
+              : k === "fade"
+                ? { opacity: 0 }
+                : heading
+                  ? { opacity: 0, transform: "translateY(28px)", filter: "blur(8px)" }
+                  : { opacity: 0, transform: "translateY(28px)" };
+          const to: Keyframe = heading ? { opacity: 1, transform: "none", filter: "blur(0)" } : { opacity: 1, transform: "none" };
+          el.animate([from, to], { duration: 950, delay: d, easing: EASE, fill: "backwards" });
+          playExtras(el, d);
+        }),
+      { rootMargin: "0px 0px -6% 0px" },
+    );
+
+    const scan = () => {
+      document.querySelectorAll<HTMLElement>("[data-reveal]:not([data-rv])").forEach((el) => {
+        el.setAttribute("data-rv", "1");
+        if (el.getBoundingClientRect().top < window.innerHeight * 0.9) return;
+        el.style.opacity = "0";
+        io.observe(el);
       });
     };
-    const apply = (it: Item) => {
-      const v = it.cur, s = it.el.style;
-      if (it.kind === "px") s.translate = "0 " + v.toFixed(2) + "px";
-      else if (it.kind === "hero") { s.scale = (1 - v * 0.03).toFixed(4); s.opacity = (1 - v * 0.2).toFixed(3); }
-      else if (it.kind === "grow") s.scale = (0.96 + v * 0.04).toFixed(4);
-    };
 
+    const t = setTimeout(scan, 80);
+    // Catch elements mounted later (tab panels, conditional blocks).
+    const mo = new MutationObserver(() => scan());
+    mo.observe(document.body, { childList: true, subtree: true });
+
+    /* ---------------- Parallax ---------------- */
     let raf = 0;
-    const tick = () => {
+    const items = () => [...document.querySelectorAll<HTMLElement>("[data-parallax]")];
+    const update = () => {
       raf = 0;
-      let moving = false;
-      items.forEach(it => {
-        const d = it.tgt - it.cur;
-        if (Math.abs(d) > (it.kind === "px" ? 0.05 : 0.0005)) { it.cur += d * 0.22; moving = true; } else it.cur = it.tgt;
-        apply(it);
-      });
-      if (moving) raf = requestAnimationFrame(tick);
+      const vh = window.innerHeight;
+      for (const el of items()) {
+        const speed = parseFloat(el.dataset.parallax || "0");
+        const cur = parseFloat(el.dataset.pY || "0");
+        const r = el.getBoundingClientRect();
+        const top = r.top - cur; // position without our own offset
+        if (top > vh * 1.5 || top + r.height < -vh * 0.5) continue;
+        const y = (top + r.height / 2 - vh / 2) * -speed;
+        el.dataset.pY = String(y);
+        el.style.translate = `0 ${y.toFixed(1)}px`;
+      }
     };
-    const onScroll = () => { measure(); if (!raf) raf = requestAnimationFrame(tick); };
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(update);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    const pt = setTimeout(update, 100);
 
-    items.forEach(it => { it.el.style.willChange = it.kind === "px" ? "translate" : "scale, opacity"; });
-    measure();
-    items.forEach(it => { it.cur = it.tgt; apply(it); });
-    addEventListener("scroll", onScroll, { passive: true });
-    addEventListener("resize", onScroll, { passive: true });
     return () => {
-      removeEventListener("scroll", onScroll);
-      removeEventListener("resize", onScroll);
+      clearTimeout(t);
+      clearTimeout(pt);
       cancelAnimationFrame(raf);
-      items.forEach(({ el }) => { el.style.translate = ""; el.style.scale = ""; el.style.opacity = ""; el.style.willChange = ""; });
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      mo.disconnect();
+      io.disconnect();
+      // Anything still hidden must become visible if we leave before it revealed.
+      document.querySelectorAll<HTMLElement>("[data-reveal][data-rv]").forEach((el) => {
+        el.style.opacity = "";
+      });
     };
-  }, []);
+  }, [pathname]);
+}
+
+export function RevealObserver() {
+  useReveal();
+  return null;
 }

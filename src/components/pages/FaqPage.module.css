@@ -1,0 +1,7 @@
+/* doubled selector beats the global .container max-width */
+.wrap.wrap { max-width: 900px; }
+h1.h1 { font-size: clamp(38px,5.4vw,68px); }
+.list { margin-top: clamp(28px,3vw,44px); }
+.bottom { margin-top: 36px; display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; }
+.contact { font-size: 15px; color: var(--text2); }
+.email { font-weight: 700; }

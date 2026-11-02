@@ -1,0 +1,47 @@
+/* Shared type + layout for the inner pages (/privacy, /help, /about, /faq, /privacy-policy, /terms).
+   Values copied from design_handoff/reference/index.html lines 302–385. Inner-page headings use
+   slightly different line-height / tracking than the global .h1/.h2/.h3, so they live here. */
+
+/* First section on an inner page */
+.hero { padding-top: clamp(28px,5vw,72px); }
+
+/* Following sections */
+.section { padding-top: var(--section-y); scroll-margin-top: 76px; }
+
+.h1 {
+  margin: 0;
+  font-family: var(--font-head); font-weight: 700;
+  font-size: clamp(36px,5vw,64px); line-height: 1.04; letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+.h2 {
+  margin: 0;
+  font-family: var(--font-head); font-weight: 700;
+  font-size: clamp(28px,3.6vw,46px); line-height: 1.08; letter-spacing: -0.032em;
+  text-wrap: balance;
+}
+.h3 {
+  margin: 0;
+  font-family: var(--font-head); font-weight: 700;
+  font-size: clamp(20px,1.9vw,24px); line-height: 1.25; letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.lead {
+  margin: 0;
+  font-size: clamp(17px,1.5vw,19px); line-height: 1.65; color: var(--text2);
+  text-wrap: pretty; max-width: 620px;
+}
+.body { margin: 0; font-size: 16px; line-height: 1.65; color: var(--text2); text-wrap: pretty; }
+
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-card); padding: clamp(24px,2.6vw,34px); min-width: 0;
+}
+
+/* "Privacy policy →" style links */
+.arrowLink {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-weight: 700; font-size: 15.5px; color: var(--accent-text);
+  text-decoration: none; min-height: 44px;
+}
+.arrowLink:hover { gap: 12px; color: var(--accent-text); }

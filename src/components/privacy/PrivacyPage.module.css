@@ -1,0 +1,80 @@
+/* ---------- Hero ---------- */
+.hero { position: relative; overflow: hidden; }
+.glow {
+  position: absolute; right: -12%; top: -20%;
+  width: min(70vw,820px); aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--lav) 26%, transparent), transparent 65%);
+  pointer-events: none;
+}
+.heroGrid {
+  position: relative;
+  display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,440px),1fr));
+  gap: clamp(40px,6vw,72px); align-items: center;
+}
+.heroCopy { min-width: 0; display: flex; flex-direction: column; gap: 24px; align-items: flex-start; }
+h1.h1 { font-size: clamp(38px,5.4vw,68px); max-width: 15ch; }
+.cardCol { min-width: 0; }
+
+/* ---------- What we collect ---------- */
+.collect {
+  margin-top: clamp(28px,3vw,40px);
+  border-radius: var(--r-card); background: var(--surface); border: 1px solid var(--border);
+  padding: 8px clamp(20px,3vw,32px);
+}
+.collectRow {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 14px 24px; padding: 22px 0;
+}
+.collectRow + .collectRow { border-top: 1px solid var(--border); }
+.collectLabel { display: flex; align-items: center; gap: 14px; flex: 0 0 260px; max-width: 100%; }
+.collectIcon {
+  width: 46px; height: 46px; border-radius: 15px; flex: none;
+  display: grid; place-items: center; background: var(--chip); color: var(--accent-text);
+}
+.collectTitle { font-size: 17.5px; }
+.collectCopy { flex: 1 1 300px; font-size: 16px; line-height: 1.6; color: var(--text2); }
+
+/* ---------- Who sees what ---------- */
+h2.whoTitle { margin-bottom: clamp(28px,3vw,40px); }
+.whoGrid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,240px),1fr)); gap: 14px; }
+.whoCard { height: 100%; }
+.whoIcon {
+  width: 52px; height: 52px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--chip); color: var(--accent-text); margin-bottom: 22px;
+}
+.whoIconPrimary { background: var(--primary); color: var(--on-primary); }
+p.whoCopy { margin-top: 10px; }
+
+/* ---------- Safety (dark panel) ---------- */
+.safety {
+  display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,360px),1fr));
+  gap: clamp(24px,4vw,56px); align-items: start;
+  padding: clamp(28px,4vw,52px); border-radius: clamp(24px,3vw,36px);
+  background: var(--night); color: var(--on-night); border: 1px solid var(--frame-edge);
+}
+.safetyHead { display: flex; align-items: center; gap: 14px; }
+.safetyIcon {
+  width: 52px; height: 52px; border-radius: 16px;
+  display: grid; place-items: center;
+  background: color-mix(in srgb, var(--lav) 20%, transparent); color: var(--lav);
+}
+.safetyTitle {
+  margin: 0; font-family: var(--font-head); font-weight: 700;
+  font-size: clamp(28px,3.4vw,42px); letter-spacing: -0.03em;
+}
+.safetyCopy {
+  margin: 0; font-size: clamp(17px,1.5vw,19px); line-height: 1.65;
+  color: var(--on-night2); text-wrap: pretty;
+}
+
+/* ---------- Our promises ---------- */
+h2.promisesTitle { margin-bottom: 24px; }
+.chips { display: flex; flex-wrap: wrap; gap: 10px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 18px; border-radius: 999px;
+  background: var(--chip); color: var(--text);
+  font-weight: 700; font-size: 15px; white-space: nowrap;
+}
+.chipIcon { color: var(--accent-text); display: flex; }
+.legal { margin-top: 32px; display: flex; flex-wrap: wrap; gap: 8px 24px; }

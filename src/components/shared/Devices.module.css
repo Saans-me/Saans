@@ -1,0 +1,59 @@
+/* ---------- Laptop ---------- */
+.laptop { width: 100%; min-width: 0; }
+.lid {
+  border-radius: clamp(12px, 1.4vw, 18px) clamp(12px, 1.4vw, 18px) 4px 4px;
+  padding: clamp(5px, .7vw, 9px);
+  background: var(--frame);
+  box-shadow: 0 50px 100px -50px var(--shadow), 0 0 0 1px var(--frame-edge);
+}
+.screen {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: 5px;
+  overflow: hidden;
+  background: #FFFFFF;
+}
+.laptopImg { object-fit: cover; object-position: top left; }
+.base {
+  height: clamp(8px, 1vw, 14px);
+  margin: 0 -5%;
+  border-radius: 2px 2px 16px 16px;
+  background: linear-gradient(var(--base1), var(--base2));
+}
+
+/* ---------- Phone ---------- */
+.phone {
+  position: relative;
+  aspect-ratio: 393 / 852;
+  border-radius: clamp(32px, 3.6vw, 46px);
+  padding: clamp(6px, .6vw, 8px);
+  background: var(--frame);
+  box-shadow: 0 50px 90px -40px var(--shadow), 0 0 0 1px var(--frame-edge);
+}
+.phoneScreen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: clamp(26px, 3vw, 38px);
+  overflow: hidden;
+  background: #F6F5F9;
+}
+.phoneImg { object-fit: cover; object-position: top; }
+
+/* Hero variant: smaller radii, darker bezel */
+.phoneHero {
+  border-radius: clamp(16px, 2.6vw, 28px);
+  padding: clamp(3px, .5vw, 6px);
+  background: #0B0A12;
+  box-shadow: 0 50px 80px -30px var(--dev-shadow), 0 0 0 1px rgba(128, 120, 160, .15);
+}
+.phoneHero .phoneScreen { border-radius: clamp(13px, 2.2vw, 24px); }
+
+/* Crossfading screen stack */
+.stackImg {
+  opacity: 0;
+  transform: scale(1.04);
+  transition: opacity .6s cubic-bezier(.22, 1, .36, 1), transform .9s cubic-bezier(.22, 1, .36, 1);
+}
+.stackOn { opacity: 1; transform: none; z-index: 1; }

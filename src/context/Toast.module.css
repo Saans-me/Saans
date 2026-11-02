@@ -1,0 +1,29 @@
+.toast {
+  position: fixed;
+  z-index: 95;
+  left: 50%;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px 12px 12px;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--bg);
+  font-weight: 800;
+  font-size: 14.5px;
+  box-shadow: 0 20px 40px -16px rgba(0, 0, 0, .4);
+  animation: saans-toast .45s cubic-bezier(.22, 1, .36, 1);
+}
+.tick {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--lav);
+  color: #15112A;
+}
+
+@keyframes saans-toast { from { opacity: 0; transform: translate(-50%,16px) } to { opacity: 1; transform: translate(-50%,0) } }

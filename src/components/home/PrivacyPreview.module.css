@@ -1,0 +1,76 @@
+/* Section 8 · Privacy preview */
+.section {
+  background: var(--bg2);
+  scroll-margin-top: 76px;
+}
+.head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.title {
+  margin: 0;
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: clamp(28px, 3.6vw, 46px);
+  line-height: 1.08;
+  letter-spacing: -0.032em;
+  text-wrap: balance;
+  max-width: 640px;
+}
+.row {
+  margin-top: clamp(36px, 4vw, 56px);
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(28px, 4vw, 48px);
+  align-items: center;
+  justify-content: center;
+}
+.col {
+  flex: 1 1 260px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(24px, 3vw, 36px);
+}
+.left { order: 1; }
+.center {
+  flex: 0 1 400px;
+  min-width: 0;
+  order: 2;
+}
+.right { order: 3; }
+
+/* Phones: the card moves above the promise lists. */
+@media (max-width: 639px) {
+  .left { order: 2; }
+  .center { order: 1; }
+}
+
+.promise {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  background: var(--chip);
+  color: var(--accent-text);
+}
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.text strong { font-size: 16px; }
+.text span {
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--text2);
+}

@@ -1,0 +1,146 @@
+/* Home §5 "For you" (reference index.html lines 124-139) */
+.section {
+  background: var(--bg2);
+  scroll-margin-top: 76px;
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: clamp(20px, 2.4vw, 28px);
+}
+
+.eyebrow {
+  margin: 0 0 18px;
+  text-align: center;
+}
+
+.h2 {
+  line-height: 1.08;
+}
+
+/* ---------- Tab pills ---------- */
+.tablist {
+  display: flex;
+  gap: 4px;
+  padding: 5px;
+  border-radius: 999px;
+  background: var(--chip);
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tablist::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  white-space: nowrap;
+  flex: none;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: none;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text2);
+  transition: background .35s cubic-bezier(.22, 1, .36, 1), color .35s ease;
+}
+.tab[aria-selected="true"] {
+  background: var(--text);
+  color: var(--bg);
+}
+
+/* ---------- Phone stage ---------- */
+.stage {
+  position: relative;
+  margin-top: clamp(28px, 3vw, 44px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: clamp(16px, 4vw, 56px);
+}
+
+.glow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(90vw, 620px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--lav) 28%, transparent), transparent 66%);
+  pointer-events: none;
+}
+
+.neighbour {
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  opacity: .35;
+  transform: scale(.82);
+  transition: opacity .4s ease, transform .6s cubic-bezier(.22, 1, .36, 1);
+}
+.neighbour:hover {
+  opacity: .6;
+}
+
+.phoneSide {
+  width: clamp(190px, 18vw, 240px);
+}
+
+.centre {
+  position: relative;
+  z-index: 1;
+}
+
+.phoneMain {
+  width: clamp(240px, 24vw, 290px);
+}
+
+/* Phone (<640px): neighbour phones hidden (reference sc-if notPhone) */
+@media (max-width: 639px) {
+  .neighbour {
+    display: none;
+  }
+}
+
+/* ---------- Panel ---------- */
+.panel {
+  margin: clamp(28px, 3vw, 40px) auto 0;
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: clamp(24px, 2.6vw, 32px);
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.copy {
+  margin: 0;
+  font-size: clamp(16px, 1.4vw, 18px);
+  line-height: 1.65;
+  color: var(--text2);
+  text-wrap: pretty;
+}
+
+
+.cta {
+  padding-top: 6px;
+}

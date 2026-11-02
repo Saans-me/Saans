@@ -1,0 +1,190 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(11, 9, 24, .55);
+  backdrop-filter: blur(10px) saturate(1.2);
+  -webkit-backdrop-filter: blur(10px) saturate(1.2);
+}
+.card {
+  position: relative;
+  max-width: 100%;
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+  border-radius: 28px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  box-shadow: 0 60px 120px -40px rgba(0, 0, 0, .5);
+  padding: clamp(26px, 4vw, 40px) clamp(20px, 4vw, 40px) calc(clamp(26px, 4vw, 40px) + env(safe-area-inset-bottom, 0px));
+}
+.wForm { width: 540px; }
+.wBreath { width: 460px; }
+.wHelp { width: 640px; }
+.wFilm { width: 1000px; }
+
+.handle { display: none; }
+
+.close {
+  position: absolute;
+  z-index: 3;
+  top: 14px;
+  right: 14px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: transform .4s cubic-bezier(.22, 1, .36, 1);
+}
+.close:hover { transform: rotate(90deg); }
+
+/* Phones: bottom sheet */
+@media (max-width: 639px) {
+  .overlay { align-items: flex-end; padding: 0; }
+  .card { width: 100%; max-height: 92dvh; border-radius: 28px 28px 0 0; }
+  .handle {
+    display: block;
+    position: absolute;
+    left: 50%;
+    top: 8px;
+    width: 40px;
+    height: 5px;
+    margin-left: -20px;
+    border-radius: 5px;
+    background: var(--border);
+  }
+}
+
+/* ---------- Shared modal content ---------- */
+.head { display: flex; flex-direction: column; gap: 6px; margin-bottom: 24px; padding-right: 44px; }
+.title {
+  margin: 0;
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: clamp(24px, 3vw, 30px);
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+.sub { margin: 0; font-size: 16px; line-height: 1.65; color: var(--text2); text-wrap: pretty; }
+.badge {
+  display: inline-flex;
+  align-self: flex-start;
+  margin-bottom: 12px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--chip);
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--accent-text);
+  letter-spacing: .04em;
+}
+.form { display: flex; flex-direction: column; gap: 16px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: 16px; }
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--text);
+}
+.check input { width: 20px; height: 20px; margin: 1px 0 0; accent-color: var(--primary); flex: none; }
+.more { font-weight: 700; font-size: 14.5px; align-self: flex-start; }
+.submit:hover { transform: none !important; }
+
+.done { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 14px; padding: 12px 0 4px; }
+.tick {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--primary);
+  color: var(--on-primary);
+}
+.doneTitle { margin: 0; font-family: var(--font-head); font-weight: 700; font-size: 26px; letter-spacing: -0.02em; }
+.doneText { margin: 0; font-size: 16px; line-height: 1.65; color: var(--text2); text-wrap: pretty; max-width: 34ch; }
+.doneActions { margin-top: 10px; width: 100%; display: flex; flex-direction: column; gap: 10px; }
+.plainClose {
+  border: none;
+  background: none;
+  min-height: 44px;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text2);
+  cursor: pointer;
+}
+.plainClose:hover { color: var(--text); }
+
+/* ---------- Breath ---------- */
+.breath { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 22px; padding-top: 8px; }
+.round { font-size: 13px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--text2); }
+.orbWrap { position: relative; width: min(64vw, 250px); aspect-ratio: 1; display: grid; place-items: center; }
+.orbRing {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px dashed color-mix(in srgb, var(--accent-text) 35%, transparent);
+}
+.orb {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, #FFFFFF 50%, var(--lav)), var(--lav) 45%, var(--primary));
+  opacity: .9;
+  animation: saans-breath 10s ease-in-out infinite;
+}
+.count { position: relative; font-family: var(--font-head); font-weight: 700; font-size: 54px; color: #15112A; }
+.phase { margin: 0; font-family: var(--font-head); font-weight: 700; font-size: 30px; letter-spacing: -0.02em; }
+.bar { width: 100%; height: 4px; border-radius: 4px; background: var(--chip); overflow: hidden; }
+.barFill { display: block; height: 100%; background: var(--primary); transition: width 1s linear; }
+.breathDone { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 22px; padding: 12px 0 4px; }
+.orbSmall {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #FFFFFF, var(--lav) 55%, var(--primary));
+  box-shadow: 0 0 0 12px color-mix(in srgb, var(--lav) 18%, transparent);
+}
+.feel { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.feelBtn { min-width: 110px; }
+.feelBtn:hover { background: var(--chip) !important; transform: none !important; }
+
+/* ---------- Help ---------- */
+.helpHead { padding-right: 44px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+.helpNote { margin: 0 0 4px; font-weight: 800; font-size: 15px; color: var(--accent-text); }
+
+/* ---------- Film ---------- */
+.filmTitle { font-size: clamp(20px, 2.4vw, 24px); margin-bottom: 18px; padding-right: 52px; }
+.video { display: block; width: 100%; aspect-ratio: 16 / 9; border-radius: 18px; background: #000; }
+.filmFoot {
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+}
+.filmFoot strong { font-size: 17px; }
+
+/* Local copy: CSS Modules scope animation names, so global keyframes can't be referenced here. */
+@keyframes saans-breath { 0% { transform: scale(.55) } 40% { transform: scale(1) } 100% { transform: scale(.55) } }

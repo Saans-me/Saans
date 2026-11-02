@@ -1,0 +1,77 @@
+.trigger {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-family: inherit;
+  font-size: 15.5px;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color .2s ease, box-shadow .3s ease, background .3s ease;
+}
+.field {
+  height: 52px;
+  padding: 0 14px 0 16px;
+  border-radius: 14px;
+  border: 1.5px solid var(--border);
+  background: var(--field);
+}
+.field:hover { border-color: color-mix(in srgb, var(--accent-text) 45%, var(--border)); }
+.field:focus-visible,
+.field.isOpen {
+  outline: none;
+  border-color: var(--accent-text);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-text) 16%, transparent);
+}
+/* Inline join form: the container draws the border */
+.bare {
+  height: 52px;
+  padding: 0 14px 0 16px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+}
+.bare:hover,
+.bare.isOpen { background: color-mix(in srgb, var(--text) 5%, transparent); }
+.bare:focus-visible { outline: 2.5px solid var(--accent-text); outline-offset: -2px; }
+
+.value, .placeholder { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.placeholder { color: var(--text2); }
+.chev { color: var(--text2); transition: transform .35s cubic-bezier(.22, 1, .36, 1); }
+.isOpen .chev { transform: rotate(180deg); color: var(--text); }
+
+.list {
+  position: fixed;
+  z-index: 200;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  max-height: 320px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 30px 60px -24px var(--shadow), 0 2px 8px -2px rgba(0, 0, 0, .12);
+  font-family: var(--font-body);
+}
+.option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  transition: background .15s ease;
+}
+.option[aria-selected="true"] { color: var(--accent-text); font-weight: 800; }
+.active { background: var(--chip); }
+.tick { color: var(--accent-text); }

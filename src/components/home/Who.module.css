@@ -1,0 +1,95 @@
+/* Home §4 "Built for three kinds of moments." (reference index.html lines 103-123) */
+.section {
+  background: var(--bg);
+  scroll-margin-top: 76px;
+}
+
+.h2 {
+  line-height: 1.08;
+  max-width: 640px;
+}
+
+.grid {
+  margin-top: clamp(36px, 4vw, 56px);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+  gap: 14px;
+}
+
+.card {
+  min-width: 0;
+  border-radius: clamp(24px, 2.6vw, 32px);
+  padding: clamp(26px, 2.8vw, 36px);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: clamp(320px, 28vw, 380px);
+  transition: transform .5s cubic-bezier(.22, 1, .36, 1), box-shadow .5s cubic-bezier(.22, 1, .36, 1);
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 34px 70px -40px var(--shadow);
+}
+
+/* Third card: dark in both themes */
+.cardDark {
+  background: var(--night);
+  color: var(--on-night);
+  border: 1px solid var(--frame-edge);
+}
+
+.icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 12px;
+  background: var(--chip);
+  color: var(--accent-text);
+}
+.cardDark .icon {
+  background: color-mix(in srgb, var(--lav) 20%, transparent);
+  color: var(--lav);
+}
+
+.h3 {
+  line-height: 1.25;
+}
+
+.body {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--text2);
+  text-wrap: pretty;
+}
+.cardDark .body {
+  color: var(--on-night2);
+}
+
+/* Inline style in the reference beats the global a:hover, so the colour stays put on hover. */
+.link,
+.link:hover {
+  color: var(--accent-text);
+}
+.link {
+  margin-top: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  font-size: 15px;
+  text-decoration: none;
+  min-height: 44px;
+}
+.link:hover {
+  gap: 12px;
+}
+.cardDark .link,
+.cardDark .link:hover {
+  color: var(--lav);
+}

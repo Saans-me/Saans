@@ -1,0 +1,24 @@
+.list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.row {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px;
+  padding: 16px 0; border-top: 1px solid var(--border);
+}
+.meta { flex: 1 1 220px; min-width: 0; display: flex; flex-direction: column; gap: 3px; line-height: 1.4; }
+.name { font-size: 16.5px; color: var(--text); }
+.detail { font-size: 14px; color: var(--text2); }
+.call {
+  flex: none; min-height: 46px; padding: 0 18px; border-radius: 999px;
+  background: var(--primary); color: var(--on-primary);
+  font-weight: 800; font-size: 14.5px; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
+}
+.call:hover { color: var(--on-primary); }
+.otherText { flex: 1 1 220px; min-width: 0; font-size: 16px; font-weight: 700; color: var(--text); }
+.other {
+  flex: none; min-height: 46px; padding: 0 18px; border-radius: 999px;
+  border: 1.5px solid color-mix(in srgb, var(--text) 22%, transparent);
+  color: var(--text); font-weight: 800; font-size: 14.5px; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
+}
+.other:hover { color: var(--text); }
+.row.flushTop { border-top: none; }

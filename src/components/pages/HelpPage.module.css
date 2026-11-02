@@ -1,0 +1,16 @@
+/* doubled selector beats the global .container max-width */
+.wrap.wrap { max-width: 880px; }
+.badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 14px; border-radius: 999px;
+  background: color-mix(in srgb, var(--brand-dot) 12%, transparent);
+  color: var(--text); font-weight: 800; font-size: 13.5px;
+}
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--brand-dot); }
+h1.h1 { margin-top: 22px; font-size: clamp(36px,5vw,62px); }
+p.lead { margin-top: 20px; }
+.card {
+  margin-top: clamp(28px,3vw,40px);
+  border-radius: var(--r-card); background: var(--surface); border: 1px solid var(--border);
+  padding: 4px clamp(18px,3vw,32px);
+}

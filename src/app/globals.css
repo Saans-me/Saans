@@ -1,84 +1,263 @@
-/* ---------- Design tokens ---------- */
+/* ==========================================================================
+   SAANS design tokens (README §3). Dark is the default theme (README §4).
+   ========================================================================== */
 :root {
-  --bg: #F3F0F8; --surface: #FFFFFF; --text: #2E2747; --text2: #514A69; --border: #DCD5EA;
-  --primary: #4E4475; --on-primary: #FFFFFF; --accent: #A99CD8; --soft1: #E3DDF1; --soft2: #EFD2C9;
-  --deep: #3B3355; --on-deep: #F7F5FA; --on-deep2: #D3CCE6; --leaf1: #2E2747; --leaf2: #A99CD8;
-  --dot: #FF5E00; --orb-op: 1; --shadow: rgba(46,39,71,.18); --danger: #B03A2E;
-  --ink-on-accent: #2A2440; --success: #3FA37A;
-  --ease: cubic-bezier(.22,1,.36,1);
-  --font: var(--font-comfortaa), 'Comfortaa', system-ui, sans-serif;
-  /* Keyframe names for CSS Modules: modules rename bare animation names to local ones,
-     so they reference the global @keyframes below through these variables. */
-  --kf-breathe: saans-breathe; --kf-float: saans-float; --kf-mote: saans-mote; --kf-ring: saans-ring;
-  --kf-turn: saans-turn; --kf-pop: saans-pop; --kf-dot: saans-dot; --kf-bar: saans-bar;
-  --kf-marquee-y: saans-marquee-y; --kf-spin: saans-spin; --kf-menu: saans-menu;
+  --bg: #F7F5FC; --bg2: #EEEAF8; --surface: #FFFFFF; --text: #17151E; --text2: #56506B;
+  --border: #E4DFF0; --primary: #5B46C9; --on-primary: #FFFFFF; --accent-text: #4A37B0;
+  --lav: #B9B0D9; --chip: #EFEBFA; --field: #FFFFFF; --night: #15112A; --on-night: #F0EDFA;
+  --on-night2: #BDB6D6; --shadow: rgba(33,24,74,.24); --leaf1: #3B3355; --leaf2: #B9B0D9;
+  --danger: #B03A2E; --frame: #17151E; --frame-edge: rgba(23,21,30,.06);
+  --base1: #D7D3E2; --base2: #B6B0C6;
+  --hero-bg: linear-gradient(180deg,#F7F5FC 0%,#EEEAF8 100%); --dev-shadow: rgba(23,21,30,.45);
   color-scheme: light;
+
+  /* fixed colours */
+  --brand-dot: #FF5E00;
+  --exam: #E8792F;
+  --alert: #FF8A4C;
+  --success: #3FA37A;
+  --on-lav: #15112A;
+
+  /* fonts (set by next/font in layout.tsx) */
+  --font-head: var(--font-comfortaa), 'Manrope', system-ui, sans-serif;
+  --font-body: var(--font-manrope), system-ui, -apple-system, sans-serif;
+
+  /* motion */
+  --ease: cubic-bezier(.22,1,.36,1);
+  --ease-in-modal: cubic-bezier(.16,1,.3,1);
+  --ease-out-modal: cubic-bezier(.4,0,.2,1);
+
+  /* layout */
+  --max: 1160px;
+  --gutter: clamp(20px,4vw,40px);
+  --section-y: clamp(72px,8vw,112px);
+  --r-card: clamp(22px,2.4vw,30px);
+  --r-panel: clamp(28px,4vw,48px);
 }
+
 [data-theme="dark"] {
-  --bg: #1C1828; --surface: #241F33; --text: #EEEAF6; --text2: #B9B1CF; --border: #352E48;
-  --primary: #C9C0E6; --on-primary: #2A2440; --accent: #B9B0D9; --soft1: #2A2440; --soft2: #2F2944;
-  --deep: #302A47; --on-deep: #EEEAF6; --on-deep2: #B9B1CF; --leaf1: #EEEAF6; --leaf2: #B9B0D9;
-  --orb-op: .55; --shadow: rgba(10,8,18,.45); --danger: #F08A80;
+  --bg: #15112A; --bg2: #1E1939; --surface: #1E1938; --text: #F0EDFA; --text2: #B6AFD0;
+  --border: #312A52; --primary: #B9B0D9; --on-primary: #15112A; --accent-text: #CBC2F0;
+  --lav: #B9B0D9; --chip: #2A2348; --field: #191430; --night: #0E0B1F; --on-night: #F0EDFA;
+  --on-night2: #B6AFD0; --shadow: rgba(0,0,0,.55); --leaf1: #F0EDFA; --leaf2: #B9B0D9;
+  --danger: #F2958B; --frame: #07050E; --frame-edge: rgba(185,176,217,.2);
+  --base1: #3A3456; --base2: #231E3A;
+  --hero-bg: radial-gradient(120% 80% at 50% 100%,#2A2150 0%,#15112A 60%); --dev-shadow: rgba(0,0,0,.6);
   color-scheme: dark;
 }
 
-/* ---------- Resets ---------- */
-html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none }
-button, a { touch-action: manipulation }
-@media (hover: none) { article:hover, button:hover, a:hover { transform: none !important; box-shadow: none !important } }
-img, svg, video { max-width: 100% }
+/* ==========================================================================
+   Resets
+   ========================================================================== */
+* { box-sizing: border-box; }
+html { scroll-padding-top: 96px; }
 body {
-  margin: 0; background: var(--bg); color: var(--text); font-family: var(--font);
-  font-size: 16px; line-height: 1.68; -webkit-font-smoothing: antialiased;
-  transition: background .4s ease, color .4s ease;
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  transition: background-color .4s ease, color .4s ease;
 }
-* { box-sizing: border-box }
-button, input { font: inherit; color: inherit }
-a { color: var(--primary); text-decoration-thickness: 1px; text-underline-offset: 3px }
-a:hover { color: var(--text) }
-:focus-visible { outline: 3px solid var(--primary); outline-offset: 3px }
-input::placeholder { color: var(--text2); opacity: 1 }
-html, body, * { scrollbar-width: none }
-*::-webkit-scrollbar { display: none }
+a { color: var(--accent-text); }
+a:hover { color: var(--text); }
+img, video { max-width: 100%; }
+button { font: inherit; }
+::selection { background: var(--lav); color: #15112A; }
+:focus-visible { outline: 2.5px solid var(--accent-text); outline-offset: 3px; border-radius: 8px; }
 
-/* ---------- Laptop zoom (applied to the page wrapper, #top) ---------- */
-@media (min-width: 1000px) and (max-width: 1599px) { .page { zoom: .9 } }
-@media (min-width: 1000px) and (max-height: 860px) { .page { zoom: .86 } }
-@media (min-width: 1000px) and (max-height: 720px) { .page { zoom: .8 } }
-@media (min-width: 1000px) and (max-height: 600px) { .page { zoom: .74 } }
+/* ==========================================================================
+   Keyframes (copied unchanged from the reference)
+   ========================================================================== */
+@keyframes saans-flow { to { stroke-dashoffset: -50 } }
+@keyframes saans-breath { 0% { transform: scale(.55) } 40% { transform: scale(1) } 100% { transform: scale(.55) } }
+@keyframes saans-float { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-10px) } }
+@keyframes saans-ring { 0% { transform: scale(.85); opacity: .55 } 100% { transform: scale(1.5); opacity: 0 } }
+@keyframes saans-beat { 0%,100% { transform: scale(1) } 15% { transform: scale(1.18) } 30% { transform: scale(1) } 45% { transform: scale(1.12) } }
+@keyframes saans-dot { 0%,80%,100% { opacity: .25; transform: translateY(0) } 40% { opacity: 1; transform: translateY(-3px) } }
+@keyframes saans-toast { from { opacity: 0; transform: translate(-50%,16px) } to { opacity: 1; transform: translate(-50%,0) } }
 
-/* ---------- Keyframes (verbatim from the reference) ---------- */
-@keyframes saans-glass-in { from { opacity: 0; transform: translateY(40px) scale(.92); filter: blur(10px) } to { opacity: 1; transform: none; filter: blur(0) } }
-@keyframes saans-scrim-in { from { opacity: 0 } to { opacity: 1 } }
-@keyframes saans-breathe { 0%, 100% { transform: scale(.72) } 50% { transform: scale(1) } }
-@keyframes saans-dot { 0%, 80%, 100% { opacity: .3; transform: translateY(0) } 40% { opacity: 1; transform: translateY(-3px) } }
-@keyframes saans-in { from { transform: translateX(70px); opacity: 0 } to { transform: none; opacity: 1 } }
-@property --saans-angle { syntax: '<angle>'; initial-value: 0deg; inherits: false }
-@keyframes saans-rotate { to { --saans-angle: 360deg } }
-@keyframes saans-flow { 0%, 100% { background-position: 0% 50% } 50% { background-position: 100% 50% } }
-@keyframes saans-shimmer { from { background-position: 150% 0 } to { background-position: -100% 0 } }
-@keyframes saans-word { from { opacity: 0; filter: blur(6px); transform: translateY(5px) } to { opacity: 1; filter: blur(0); transform: none } }
-@keyframes saans-think { 0%, 100% { transform: rotate(0) scale(1) } 50% { transform: rotate(-14deg) scale(1.14) } }
-@keyframes saans-marquee-y { to { transform: translateY(-50%) } }
-@keyframes saans-bar { 0%, 100% { transform: scaleY(.25) } 50% { transform: scaleY(1) } }
-@keyframes saans-pop { from { opacity: 0; transform: translateY(12px) scale(.9) } to { opacity: 1; transform: none } }
-@keyframes saans-rise { from { opacity: 0; transform: translateY(24px) scale(.94) } to { opacity: 1; transform: none } }
-@keyframes saans-float { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(-10px) } }
-@keyframes saans-mote { 0%, 100% { transform: translate(0, 0) } 33% { transform: translate(14px, -22px) } 66% { transform: translate(-10px, -8px) } }
-@keyframes saans-spin { from { opacity: 0; transform: rotate(-120deg) scale(.4) } to { opacity: 1; transform: none } }
-@keyframes saans-ring { 0% { transform: scale(.8); opacity: .55 } 100% { transform: scale(1.9); opacity: 0 } }
-::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal }
-@keyframes saans-menu { from { opacity: 0; transform: translateY(-10px) scale(.97) } to { opacity: 1; transform: none } }
-@keyframes saans-turn { to { transform: rotate(360deg) } }
-@keyframes saans-lab { 0%, 44% { opacity: 1; transform: none } 50%, 94% { opacity: 0; transform: translateY(6px) } 100% { opacity: 1; transform: none } }
-@keyframes saans-prog { from { transform: scaleX(0) } to { transform: scaleX(1) } }
-@keyframes saans-fade { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: none } }
+/* ==========================================================================
+   Page wrapper + laptop zoom (README §5). Zoom is on the page, never on modals.
+   ========================================================================== */
+.page { min-height: 100vh; overflow-x: clip; }
+@media (min-width: 1000px) and (max-width: 1599px) { .page { zoom: .86 } }
+@media (min-width: 1000px) and (max-height: 820px) { .page { zoom: .8 } }
+@media (min-width: 1000px) and (max-height: 700px) { .page { zoom: .74 } }
 
-/* Press ripple + theme cross-fade fallback (re-implemented from the prototype's motion helper) */
-.sm-ripple { position: absolute; border-radius: 50%; pointer-events: none; background: currentColor; opacity: .22; transform: scale(0); z-index: 0 }
-html.sm-theming, html.sm-theming * { transition: background-color .6s ease, color .6s ease, border-color .6s ease, fill .6s ease !important }
+.skip-link {
+  position: absolute; left: -9999px; top: 8px; z-index: 100;
+  padding: 10px 16px; border-radius: 12px; background: var(--surface); color: var(--text);
+}
+.skip-link:focus { left: 12px; }
 
+/* ==========================================================================
+   Shared primitives (used across pages; per-component layout lives in CSS Modules)
+   ========================================================================== */
+.container { max-width: var(--max); margin: 0 auto; padding-left: var(--gutter); padding-right: var(--gutter); }
+.section { padding-top: var(--section-y); padding-bottom: var(--section-y); }
+
+.eyebrow {
+  margin: 0;
+  font-size: 12.5px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--accent-text);
+}
+.h1 {
+  margin: 0;
+  font-family: var(--font-head); font-weight: 700;
+  font-size: clamp(36px,5vw,64px); line-height: 1.05; letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+.h2 {
+  margin: 0;
+  font-family: var(--font-head); font-weight: 700;
+  font-size: clamp(28px,3.6vw,46px); line-height: 1.08; letter-spacing: -0.032em;
+  text-wrap: balance;
+}
+.h3 {
+  margin: 0;
+  font-family: var(--font-head); font-weight: 700;
+  font-size: clamp(20px,1.9vw,24px); line-height: 1.25; letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.lead { margin: 0; font-size: clamp(16px,1.4vw,18px); line-height: 1.65; color: var(--text2); text-wrap: pretty; }
+.body { margin: 0; font-size: 16px; line-height: 1.65; color: var(--text2); text-wrap: pretty; }
+.head-font { font-family: var(--font-head); }
+
+/* Buttons: pills, min-height 52px */
+.btn {
+  white-space: nowrap; min-height: 52px; padding: 0 26px; border-radius: 999px;
+  font-family: inherit; font-weight: 700; font-size: 15.5px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  text-decoration: none;
+  transition: transform .5s var(--ease), box-shadow .5s var(--ease), background .3s ease;
+}
+.btn:active { transform: scale(.97); }
+.btn:disabled { cursor: progress; opacity: .8; }
+.btn-primary { border: none; background: var(--primary); color: var(--on-primary); }
+.btn-primary:hover { color: var(--on-primary); transform: translateY(-2px); box-shadow: 0 16px 34px -14px var(--shadow); }
+.btn-ghost { border: 1.5px solid color-mix(in srgb, var(--text) 22%, transparent); background: transparent; color: var(--text); }
+.btn-ghost:hover { color: var(--text); transform: translateY(-2px); background: color-mix(in srgb, var(--text) 6%, transparent); }
+/* lavender button used on dark (--night) panels */
+.btn-lav { border: none; background: var(--lav); color: #15112A; }
+.btn-lav:hover { color: #15112A; transform: translateY(-2px); }
+.btn-ghost-night { border: 1.5px solid color-mix(in srgb, var(--on-night) 32%, transparent); background: transparent; color: var(--on-night); }
+.btn-ghost-night:hover { color: var(--on-night); transform: translateY(-2px); background: color-mix(in srgb, var(--on-night) 10%, transparent); }
+.btn-block { width: 100%; }
+.btn-link {
+  border: none; background: none; padding: 0; min-height: 44px;
+  font-family: inherit; font-weight: 700; font-size: 15px; color: var(--text2); cursor: pointer;
+  display: inline-flex; align-items: center; gap: 8px;
+  text-decoration: underline; text-underline-offset: 4px;
+  text-decoration-color: color-mix(in srgb, var(--text2) 40%, transparent);
+}
+.btn-link:hover { color: var(--text); }
+.text-link {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-weight: 800; font-size: 15px; text-decoration: none; color: var(--accent-text);
+  background: none; border: none; padding: 0; cursor: pointer; font-family: inherit;
+}
+.text-link:hover { color: var(--text); }
+
+/* Form fields */
+.field-label { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.field-label > span:first-child { font-size: 13.5px; font-weight: 700; color: var(--text); }
+.field-optional { font-weight: 600; color: var(--text2); }
+.field {
+  width: 100%; height: 52px; padding: 0 16px; border-radius: 14px;
+  border: 1.5px solid var(--border); background: var(--field); color: var(--text);
+  font-family: inherit; font-size: 15.5px; outline: none; transition: border-color .2s ease;
+}
+.field:focus { border-color: var(--accent-text); }
+select.field {
+  appearance: none; -webkit-appearance: none; cursor: pointer; padding-right: 40px;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 22px) 23px, calc(100% - 16px) 23px;
+  background-size: 6px 6px; background-repeat: no-repeat;
+}
+textarea.field { height: auto; padding: 14px 16px; resize: vertical; line-height: 1.5; }
+.form-error { margin: 0; font-size: 14px; font-weight: 700; color: var(--danger); }
+
+/* Placeholder text that must be filled before launch */
+.ph {
+  border-bottom: 1.5px dashed color-mix(in srgb, var(--accent-text) 60%, transparent);
+  color: var(--accent-text);
+}
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+/* ==========================================================================
+   Page-load intro (home hero). In the global stylesheet (always in <head>); the
+   <head> script holds it on .intro-wait until the heading font is ready, then flips
+   to .intro-go, so it plays exactly once with the final font.
+   No JS / reduced motion: no class is added, so everything is simply visible.
+   ========================================================================== */
+[data-intro="word"] { display: inline-block; }
+html.intro-wait [data-intro] { opacity: 0; }
+html.intro-go [data-intro] {
+  animation-duration: .9s;
+  animation-timing-function: var(--ease);
+  animation-fill-mode: both;
+  animation-delay: var(--d, 0ms);
+}
+html.intro-go [data-intro="word"] {
+  animation-name: intro-word;
+  animation-duration: 1s;
+  animation-delay: calc(80ms + var(--i) * 85ms);
+}
+html.intro-go [data-intro="up"] { animation-name: intro-up; }
+html.intro-go [data-intro="header"] { animation-name: intro-header; animation-duration: 1s; animation-timing-function: var(--ease-in-modal); }
+html.intro-go [data-intro="laptop"] { animation-name: intro-laptop; animation-duration: 1.3s; animation-timing-function: var(--ease-in-modal); }
+html.intro-go [data-intro="phoneL"] { animation-name: intro-phone-l; animation-duration: 1.3s; animation-timing-function: var(--ease-in-modal); }
+html.intro-go [data-intro="phoneR"] { animation-name: intro-phone-r; animation-duration: 1.3s; animation-timing-function: var(--ease-in-modal); }
+@keyframes intro-word { from { opacity: 0; transform: translateY(.5em) rotate(3deg); filter: blur(8px); } to { opacity: 1; transform: none; filter: blur(0); } }
+@keyframes intro-header { from { opacity: 0; transform: translateY(-28px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes intro-up { from { opacity: 0; transform: translateY(22px); filter: blur(4px); } to { opacity: 1; transform: none; filter: blur(0); } }
+@keyframes intro-laptop { from { opacity: 0; transform: translateY(90px) scale(.94); } to { opacity: 1; transform: none; } }
+@keyframes intro-phone-l { from { opacity: 0; transform: translate(-40px, 110px) rotate(-8deg); } to { opacity: 1; transform: none; } }
+@keyframes intro-phone-r { from { opacity: 0; transform: translate(40px, 110px) rotate(8deg); } to { opacity: 1; transform: none; } }
+
+/* ==========================================================================
+   Extra motion
+   ========================================================================== */
+/* Cards lift gently on hover (pointer devices only). */
+@media (hover: hover) {
+  [data-lift] { transition: transform .6s var(--ease), box-shadow .6s var(--ease); }
+  [data-lift]:hover { transform: translateY(-6px); box-shadow: 0 36px 70px -40px var(--shadow); }
+}
+/* Big numbers keep their width while counting up. */
+[data-count] { font-variant-numeric: tabular-nums; }
+
+/* Reading progress bar (CSS scroll-driven animation; hidden where unsupported). */
+.scroll-progress {
+  position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 80;
+  transform-origin: 0 50%; transform: scaleX(0); pointer-events: none;
+  background: linear-gradient(90deg, var(--lav), var(--primary) 55%, #FF5E00);
+}
+@supports (animation-timeline: scroll()) {
+  .scroll-progress { animation: saans-progress linear both; animation-timeline: scroll(root block); }
+}
+@keyframes saans-progress { to { transform: scaleX(1); } }
+
+/* Lenis */
+html.lenis, html.lenis body { height: auto; }
+
+/* ==========================================================================
+   Reduced motion: turn everything off (the breath countdown still runs in JS).
+   ========================================================================== */
 @media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto }
-  *, *::before, *::after { animation: none !important; transition: none !important }
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* Slightly larger sections on laptops/desktops (everything inside scales together,
+   on top of the page-level laptop zoom). Phones are unchanged. */
+@media (min-width: 900px) {
+  .zoom-lg { zoom: 1.14; }
+  .zoom-md { zoom: 1.1; }
+}
+
+/* <main>: inner pages get bottom padding; Home ends on the Join section. */
+.page-main { padding-bottom: var(--section-y); }
