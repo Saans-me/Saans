@@ -50,7 +50,7 @@ export function Footer() {
             <Icon name="external" size={13} />
           </SurveyLink>
           <a href={`mailto:${CONTACT_EMAIL}`} className={styles.link}>
-            Contact <span className={styles.muted}>[{CONTACT_EMAIL}]</span>
+            Contact <span className={styles.muted}>{CONTACT_EMAIL}</span>
           </a>
         </div>
 

@@ -61,8 +61,7 @@ src/
 ## Before launch (placeholders)
 
 - `NEXT_PUBLIC_FORM_ENDPOINT` and `NEXT_PUBLIC_SITE_URL` (env vars)
-- `hello@saans.me` and the X / Instagram / LinkedIn links → `src/lib/content.ts`
-- Team names, lines and photos → `/about`
+- The X / Instagram / LinkedIn links → `src/lib/content.ts`
 - Privacy policy and terms text
 - Film captions → put a `.vtt` in `public/film/` and set `FILM_CAPTIONS` in `src/components/modals/FilmModal.tsx`
 

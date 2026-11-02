@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Icon } from "@/components/shared/Icon";
 import { ModalButton } from "@/components/shared/Actions";
 import inner from "./inner.module.css";
@@ -5,12 +6,10 @@ import styles from "./AboutPage.module.css";
 
 const PROMISE = ["Always private", "Always honest about its limits", "Always in your language"];
 
-// Placeholders to fill before launch (README §10): team names, one-liners and photos.
-const TEAM: { id: string; name: string; role: string }[] = [
-  { id: "team-1", name: "Divyansh", role: "CEO" },
-  { id: "team-2", name: "[Name]", role: "CTO" },
-  { id: "team-3", name: "[Name]", role: "COO" },
-  { id: "team-4", name: "[Name]", role: "CFO" },
+const TEAM: { id: string; name: string; role: string; line: string; photo: string }[] = [
+  { id: "team-1", name: "Divyansh", role: "CEO", line: "FDE @ Vanna Protocol", photo: "/team/divyansh.webp" },
+  { id: "team-2", name: "Arshdeep", role: "Co-founder", line: "Software Engineer @ JA Assure", photo: "/team/arshdeep.webp" },
+  { id: "team-3", name: "Advay", role: "Co-founder", line: "SDE @ Vanna Protocol", photo: "/team/advay.webp" },
 ];
 
 /** /about (reference lines 328–357). */
@@ -70,21 +69,13 @@ export function AboutPage() {
             {TEAM.map((m, i) => (
               <div key={m.id} data-reveal="up" data-reveal-delay={String(i * 80)} data-lift className={styles.member}>
                 <div className={styles.photo}>
-                  {/* TODO: replace with the real team photo (reference <image-slot id="{m.id}">), e.g. next/image fill + object-fit: cover. */}
-                  <span className={styles.photoPlaceholder} role="img" aria-label={`Photo placeholder for ${m.name}`}>
-                    <Icon name="user" size={40} strokeWidth={1.6} />
-                    <span className={styles.photoLabel}>Photo</span>
-                  </span>
+                  <Image src={m.photo} alt={m.name} fill sizes="(max-width: 640px) 100vw, 280px" className={styles.photoImg} />
                 </div>
                 <span className={styles.memberMeta}>
                   <strong className={styles.memberName}>{m.name}</strong>
                   <span className={styles.memberRole}>{m.role}</span>
                 </span>
-                <span className={styles.memberLine}>
-                  <span title="Placeholder" className="ph">
-                    [one line]
-                  </span>
-                </span>
+                <span className={styles.memberLine}>{m.line}</span>
               </div>
             ))}
           </div>

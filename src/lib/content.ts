@@ -3,7 +3,7 @@
 export const SURVEY_URL =
   "https://docs.google.com/forms/d/e/1FAIpQLSfuRTl49MZc6-YOYjas6g9L1Ug8RAC9FkMcp62ep1VuHO90tw/viewform";
 
-export const CONTACT_EMAIL = "hello@saans.me"; // placeholder: confirm before launch
+export const CONTACT_EMAIL = "admin@saans.me";
 
 export const SOCIAL = [
   { label: "X", href: "#", title: "[X link]" },

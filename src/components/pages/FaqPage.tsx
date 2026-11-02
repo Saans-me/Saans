@@ -22,7 +22,7 @@ export function FaqPage() {
           <span className={styles.contact}>
             Still unsure? Email{" "}
             <a href={`mailto:${CONTACT_EMAIL}`} className={styles.email}>
-              [{CONTACT_EMAIL}]
+              {CONTACT_EMAIL}
             </a>
           </span>
         </div>
