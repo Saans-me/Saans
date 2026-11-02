@@ -37,15 +37,15 @@ p.visionEyebrow { color: var(--lav); }
 
 /* ---------- Team ---------- */
 h2.teamTitle { margin-bottom: clamp(28px,3vw,40px); }
-/* auto-fill keeps each card the same size as with 4 members (3 cards + an empty slot on wide screens). */
-.teamGrid { display: grid; grid-template-columns: repeat(auto-fill,minmax(min(100%,230px),1fr)); gap: 14px; }
+/* Three members fill the row on desktop (2 per row on tablets, 1 on phones). */
+.teamGrid { display: grid; grid-template-columns: repeat(auto-fill,minmax(min(100%,300px),1fr)); gap: 16px; }
 .member {
   min-width: 0; padding: 20px; border-radius: 26px;
   background: var(--surface); border: 1px solid var(--border);
   display: flex; flex-direction: column; gap: 14px;
 }
 .photo {
-  position: relative; width: 100%; aspect-ratio: 1; border-radius: 18px;
+  position: relative; width: 100%; aspect-ratio: 4 / 5; border-radius: 18px;
   overflow: hidden; background: var(--chip);
 }
 .photoPlaceholder {

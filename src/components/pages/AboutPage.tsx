@@ -7,9 +7,9 @@ import styles from "./AboutPage.module.css";
 const PROMISE = ["Always private", "Always honest about its limits", "Always in your language"];
 
 const TEAM: { id: string; name: string; role: string; line: string; photo: string }[] = [
-  { id: "team-1", name: "Divyansh", role: "CEO", line: "FDE @ Vanna Protocol", photo: "/team/divyansh.webp" },
-  { id: "team-2", name: "Arshdeep", role: "Co-founder", line: "Software Engineer @ JA Assure", photo: "/team/arshdeep.webp" },
-  { id: "team-3", name: "Advay", role: "Co-founder", line: "SDE @ Vanna Protocol", photo: "/team/advay.webp" },
+  { id: "team-1", name: "Divyansh", role: "CEO", line: "FDE @ Vanna Protocol", photo: "/team/divyansh-portrait.webp" },
+  { id: "team-2", name: "Arshdeep", role: "Co-founder", line: "Software Engineer @ JA Assure", photo: "/team/arshdeep-portrait.webp" },
+  { id: "team-3", name: "Advay", role: "Co-founder", line: "SDE @ Vanna Protocol", photo: "/team/advay-portrait.webp" },
 ];
 
 /** /about (reference lines 328–357). */
@@ -69,7 +69,7 @@ export function AboutPage() {
             {TEAM.map((m, i) => (
               <div key={m.id} data-reveal="up" data-reveal-delay={String(i * 80)} data-lift className={styles.member}>
                 <div className={styles.photo}>
-                  <Image src={m.photo} alt={m.name} fill sizes="(max-width: 640px) 100vw, 280px" className={styles.photoImg} />
+                  <Image src={m.photo} alt={m.name} fill sizes="(max-width: 640px) 100vw, 380px" className={styles.photoImg} />
                 </div>
                 <span className={styles.memberMeta}>
                   <strong className={styles.memberName}>{m.name}</strong>
