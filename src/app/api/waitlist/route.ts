@@ -3,7 +3,8 @@ import { waitlistSchema } from "@/lib/waitlist/schema";
 import { clientIp, isRateLimited } from "@/lib/waitlist/rate-limit";
 import { addToWaitlist, WaitlistConfigError, WaitlistStoreError } from "@/lib/waitlist/server";
 
-const MAX_BODY_BYTES = 2_048;
+// Room for the longest answer in any script: 1,000 characters can be 4,000 bytes.
+const MAX_BODY_BYTES = 6_144;
 
 function reply(status: number, body: Record<string, unknown>) {
   return Response.json(body, { status, headers: { "Cache-Control": "no-store" } });
@@ -74,9 +75,9 @@ export async function POST(req: Request) {
   // Only the error code goes back. Zod issues can echo the input, so they are never returned or logged.
   if (!parsed.success) return failed(400, "invalid");
 
-  const { email, role, country, survey, source } = parsed.data;
+  const { email, role, country, struggles, survey, source } = parsed.data;
   try {
-    await addToWaitlist({ email, role, country, wants_survey: survey, source });
+    await addToWaitlist({ email, role, country, struggles, wants_survey: survey, source });
   } catch (e) {
     if (e instanceof WaitlistConfigError) {
       console.error(`[waitlist] not configured: ${e.message}`);

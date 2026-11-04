@@ -126,6 +126,7 @@ function send(port, { method = "POST", headers = {}, body, chunked = false, noOr
     req.end();
   });
 }
+const STRUGGLES_TEXT = "e2e: raat ko neend nahi aati, exams ka darr hai";
 const validBody = (email, extra = {}) => ({ email, role: ROLE, country: "India", survey: false, source: "modal", ...extra });
 
 // ---------------------------------------------------------------- servers
@@ -187,7 +188,7 @@ async function openPage(viewportName, port, { ip = uniqueIp() } = {}) {
 }
 
 /** Everything a real person does: opens the modal from the hero and fills in the form. */
-async function fillModal(page, { email, role = ROLE, country, survey = false }) {
+async function fillModal(page, { email, role = ROLE, country, struggles, survey = false }) {
   await page.locator("button:visible", { hasText: "Join the waitlist" }).first().click();
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("heading", { name: "Be one of the first to try SAANS." }).waitFor();
@@ -200,6 +201,7 @@ async function fillModal(page, { email, role = ROLE, country, survey = false }) 
     await dialog.getByRole("combobox", { name: "Country" }).click();
     await page.getByRole("option", { name: country, exact: true }).click();
   }
+  if (struggles) await dialog.locator("textarea").fill(struggles);
   if (survey) await dialog.getByRole("checkbox").check();
   return dialog;
 }
@@ -249,6 +251,7 @@ async function databaseAndPostgrest() {
   await insert(sqlEmail);
   check("DB rejects a second copy of an email", (await dbErr(() => insert(sqlEmail))) === "23505");
   check("DB rejects a different-case copy of an email", (await dbErr(() => insert(sqlEmail.toUpperCase()))) === "23514");
+  check("DB rejects an over-long answer", (await dbErr(() => db.query("insert into public.waitlist (email, role, source, struggles) values ($1, 'x', 'modal', $2)", [newEmail("longsql"), "x".repeat(1001)]))) === "23514");
   check("DB rejects a badly formatted email", (await dbErr(() => insert("not-an-email"))) === "23514");
   check("DB rejects an over-long email", (await dbErr(() => insert(`${"a".repeat(260)}@example.com`))) === "23514");
 
@@ -298,6 +301,26 @@ async function databaseAndPostgrest() {
 async function apiAbuse() {
   const port = PORTS.main;
   const noRow = async (email) => (await rowsFor(email)).length === 0;
+
+  // the optional "what's been hard" answer
+  const post = (body) => fetch(`http://localhost:${port}/api/waitlist`, { method: "POST", headers: { "Content-Type": "application/json", Origin: `http://localhost:${port}`, "x-real-ip": "203.0.113.77" }, body: JSON.stringify(body) });
+  const blank = newEmail("blank");
+  const blankReply = await post(validBody(blank, { struggles: "   " }));
+  const blankRows = await rowsFor(blank);
+  check("a blank answer is stored as no answer", blankReply.status === 200 && blankRows.length === 1 && blankRows[0].struggles === null, `${blankReply.status}`);
+  const none = newEmail("none");
+  const noneReply = await post(validBody(none));
+  check("the answer can be left out", noneReply.status === 200 && (await rowsFor(none))[0]?.struggles === null, `${noneReply.status}`);
+  const hindi = newEmail("hindi");
+  const longest = "न".repeat(1000);
+  const hindiReply = await post(validBody(hindi, { struggles: longest }));
+  check("1,000 characters of Hindi fit", hindiReply.status === 200 && (await rowsFor(hindi))[0]?.struggles === longest, `${hindiReply.status}`);
+  const tooLong = newEmail("toolong");
+  const longReply = await post(validBody(tooLong, { struggles: "x".repeat(1001) }));
+  check("1,001 characters are refused, no row", longReply.status === 400 && (await noRow(tooLong)), `${longReply.status}`);
+  const notText = newEmail("nottext");
+  const notTextReply = await post(validBody(notText, { struggles: { a: 1 } }));
+  check("a non-text answer is refused, no row", notTextReply.status === 400 && (await noRow(notText)), `${notTextReply.status}`);
 
   let email = newEmail("origin");
   let r = await send(port, { body: validBody(email), headers: { origin: "https://evil.example" } });
@@ -427,7 +450,7 @@ async function modalFlows(name) {
       await new Promise((r) => setTimeout(r, 400));
       await route.continue();
     });
-    const dialog = await fillModal(page, { email: signup, country: "India", survey: true });
+    const dialog = await fillModal(page, { email: signup, country: "India", struggles: STRUGGLES_TEXT, survey: true });
     await page.screenshot({ path: path.join(SHOTS, `${name}-modal-filled.png`) });
     await submitModal(dialog);
     const loading = dialog.getByRole("button", { name: "Joining…" });
@@ -440,11 +463,12 @@ async function modalFlows(name) {
     const row = rows[0];
     check(
       label("row exists with the submitted fields"),
-      rows.length === 1 && row.email === signup && row.role === ROLE && row.country === "India" && row.wants_survey === true && row.source === "modal" && row.id && row.created_at,
+      rows.length === 1 && row.email === signup && row.role === ROLE && row.country === "India" && row.struggles === STRUGGLES_TEXT && row.wants_survey === true && row.source === "modal" && row.id && row.created_at,
       rows.length ? `role=${row.role}, country=${row.country}, survey=${row.wants_survey}, source=${row.source}` : "no row",
     );
     const layer = JSON.stringify(await page.evaluate(() => window.dataLayer ?? []));
     check(label("analytics got the event but no email"), layer.includes("waitlist_submit") && !layer.toLowerCase().includes("@"), layer);
+    check(label("analytics got nothing of what they wrote"), !layer.includes(STRUGGLES_TEXT.slice(0, 12)));
     const sent = seen.apiRequests[0];
     check(label("browser sent one same-origin request"), seen.apiRequests.length === 1 && new URL(sent.url()).pathname === "/api/waitlist");
     await assertClean(label("signup"), tab);
@@ -552,11 +576,14 @@ async function modalFlows(name) {
     await join.locator('input[type="email"]').fill(email);
     await join.getByRole("combobox", { name: "I am" }).click();
     await page.getByRole("option", { name: ROLE, exact: true }).click();
+    await join.getByRole("combobox", { name: "Country" }).click();
+    await page.getByRole("option", { name: "India", exact: true }).click();
+    await join.locator("textarea").fill(STRUGGLES_TEXT);
     await page.screenshot({ path: path.join(SHOTS, `${name}-join-filled.png`) });
     await join.getByRole("button", { name: "Join the waitlist" }).click();
     await join.getByText(SUCCESS).waitFor();
     const rows = await rowsFor(email);
-    check(label("home page form: success and row"), rows.length === 1 && rows[0].source === "join_section" && rows[0].country === null, rows[0] ? `source=${rows[0].source}, country=${rows[0].country}` : "no row");
+    check(label("home page form: success and row"), rows.length === 1 && rows[0].source === "join_section" && rows[0].country === "India" && rows[0].struggles === STRUGGLES_TEXT, rows[0] ? `source=${rows[0].source}, country=${rows[0].country}` : "no row");
     await assertClean(label("home page form"), tab);
     await tab.context.close();
   }
@@ -684,6 +711,7 @@ function logsAreClean() {
   const text = logs.map((l) => l.text).join("\n").toLowerCase();
   const leaked = [...usedEmails].filter((e) => text.includes(e.toLowerCase()));
   check("server logs contain no submitted email", leaked.length === 0, `${usedEmails.size} addresses searched in ${text.length} bytes`);
+  check("server logs contain nothing people wrote", !text.includes(STRUGGLES_TEXT.toLowerCase()));
   check("server logs contain no secret key", !text.includes(SUPABASE_SECRET_KEY.toLowerCase()));
   const noEnvLog = logs.find((l) => l.port === PORTS.noEnv)?.text ?? "";
   check("missing env vars are named in the server log", noEnvLog.includes("SUPABASE_URL and SUPABASE_SECRET_KEY must both be set"));

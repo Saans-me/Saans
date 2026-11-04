@@ -2,14 +2,15 @@
 
 import { Icon } from "@/components/shared/Icon";
 import { LogoMark } from "@/components/shared/Logo";
-import { ROLE_OPTIONS } from "@/lib/content";
+import { COUNTRY_OPTIONS, ROLE_OPTIONS } from "@/lib/content";
 import { postWaitlist, roleType, useSaansForm } from "@/lib/forms";
 import { Select } from "@/components/shared/Select";
 import { Honeypot } from "@/components/shared/Honeypot";
+import { StrugglesField } from "@/components/shared/StrugglesField";
 import { HONEYPOT_FIELD } from "@/lib/waitlist/constants";
 import styles from "./JoinCta.module.css";
 
-const INITIAL = { email: "", role: "", [HONEYPOT_FIELD]: "" };
+const INITIAL = { email: "", role: "", country: "", struggles: "", [HONEYPOT_FIELD]: "" };
 
 const FORM_OPTS = {
   type: (v: typeof INITIAL) => roleType(v.role),
@@ -57,6 +58,19 @@ export function JoinCta() {
                   required
                   className={styles.roleBtn}
                 />
+              </div>
+              <div className={styles.role}>
+                <Select
+                  ariaLabel="Country"
+                  value={values.country}
+                  onChange={setValue("country")}
+                  options={COUNTRY_OPTIONS}
+                  placeholder="Country"
+                  className={styles.roleBtn}
+                />
+              </div>
+              <div className={styles.struggles}>
+                <StrugglesField value={values.struggles} onChange={set("struggles")} />
               </div>
               <button type="submit" disabled={sending} className={`btn btn-primary ${styles.submit}`}>
                 {sending ? "Joining…" : "Join the waitlist"}

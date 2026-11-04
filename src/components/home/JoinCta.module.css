@@ -33,7 +33,7 @@
 .form {
   margin-top: 28px;
   width: 100%;
-  max-width: 680px;
+  max-width: 760px;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -67,8 +67,14 @@
   border-width: 1px;
   font-size: 15px;
 }
+/* Both of these rows are full width; the rest wrap. */
+.struggles {
+  flex: 1 1 100%;
+  min-width: 0;
+  padding: 6px 10px 4px;
+}
 .submit {
-  flex: 1 1 170px;
+  flex: 1 1 100%;
   min-height: 52px;
 }
 /* Reference hover: 1px lift, no shadow. */

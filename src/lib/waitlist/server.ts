@@ -42,6 +42,7 @@ export type WaitlistRow = {
   email: string;
   role: string;
   country: string | null;
+  struggles: string | null;
   wants_survey: boolean;
   source: string;
 };

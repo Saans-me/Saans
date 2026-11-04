@@ -8,7 +8,7 @@ import { useUI } from "@/context/UIContext";
 
 export type ModalName = "waitlist" | "clinician" | "college" | "breath" | "help" | "film";
 
-const initWl = { email: "", role: "", country: "", survey: false, [HONEYPOT_FIELD]: "" };
+const initWl = { email: "", role: "", country: "", struggles: "", survey: false, [HONEYPOT_FIELD]: "" };
 const initCp = { name: "", email: "", role: "", country: "", clients: "", note: "" };
 const initCc = { name: "", email: "", college: "", role: "", students: "", message: "" };
 

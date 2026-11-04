@@ -7,6 +7,7 @@ import { SurveyLink } from "@/components/shared/Actions";
 import { COUNTRY_OPTIONS, ROLE_OPTIONS } from "@/lib/content";
 import { Select } from "@/components/shared/Select";
 import { Honeypot } from "@/components/shared/Honeypot";
+import { StrugglesField } from "@/components/shared/StrugglesField";
 import { HONEYPOT_FIELD } from "@/lib/waitlist/constants";
 import styles from "./Modal.module.css";
 
@@ -89,6 +90,7 @@ export function WaitlistModal() {
           <span>Country</span>
           <Select ariaLabel="Country" value={v.country} onChange={f.setValue("country")} options={COUNTRY_OPTIONS} />
         </label>
+        <StrugglesField value={v.struggles} onChange={f.set("struggles")} />
         <label className={styles.check}>
           <input type="checkbox" checked={!!v.survey} onChange={f.set("survey")} />
           I&apos;d also like to answer a 3-minute survey
