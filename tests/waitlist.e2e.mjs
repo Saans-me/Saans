@@ -1,11 +1,12 @@
 // End-to-end test of the waitlist: real browser, real production build, real Supabase.
-// Nothing is mocked. Run: npm run build && npm run test:waitlist
+// Only the email provider is replaced, by a local server that captures each message. Run: npm run build && npm run test:waitlist
 //
 // The site's env comes from .env.local; the test's own settings from .env.test.local
 // (see the README). Only rows with a unique per-run address are written, and only those
 // are deleted afterwards, so it is safe to run against a project that has real signups.
 
 import { spawn, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from "node:fs";
 import http from "node:http";
 import { createRequire } from "node:module";
@@ -19,12 +20,13 @@ const BROWSER_PATH = process.env.WAITLIST_TEST_BROWSER || "C:/Program Files (x86
 const PLAYWRIGHT_FROM =
   process.env.WAITLIST_TEST_PLAYWRIGHT_FROM || "C:/Users/dell/Desktop/Saans Website/saans-platform/package.json";
 
-const PORTS = { main: 3300, dead: 3301, badKey: 3302, noEnv: 3303, attacker: 3304 };
+const PORTS = { main: 3300, dead: 3301, badKey: 3302, noEnv: 3303, attacker: 3304, mail: 3305, noMail: 3306 };
 const VIEWPORTS = {
   phone: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true },
   desktop: { viewport: { width: 1440, height: 900 } },
 };
-const SUCCESS = "You're on the list.";
+const SUCCESS = "Check your inbox";
+const CONFIRMED = "You're on the list.";
 const ROLE = "Someone looking for support";
 const ERR_DOWN = "We couldn't add you to the list just now. Please try again in a few minutes.";
 const ERR_LIMIT = "Too many attempts. Please wait a few minutes and try again.";
@@ -98,11 +100,17 @@ const newDbClient = () =>
     ssl: isLocalStack ? undefined : { rejectUnauthorized: false },
   });
 let db = newDbClient();
+/** Requests waiting for confirmation. */
 const rowsFor = async (email) =>
+  (await db.query("select * from public.waitlist_pending where lower(email) = lower($1)", [email])).rows;
+/** People who confirmed: the real list. */
+const listedFor = async (email) =>
   (await db.query("select * from public.waitlist where lower(email) = lower($1)", [email])).rows;
+const backdate = (email, column, interval) =>
+  db.query(`update public.waitlist_pending set ${column} = ${column} - $1::interval where email = $2`, [interval, email]);
 
 /** Raw HTTP so that every header (and the lack of one) is exactly what the test says. */
-function send(port, { method = "POST", headers = {}, body, chunked = false, noOrigin = false } = {}) {
+function send(port, { method = "POST", headers = {}, body, chunked = false, noOrigin = false, path: urlPath = "/api/waitlist" } = {}) {
   return new Promise((resolve, reject) => {
     const payload = body === undefined ? undefined : typeof body === "string" ? body : JSON.stringify(body);
     const allHeaders = {
@@ -113,7 +121,7 @@ function send(port, { method = "POST", headers = {}, body, chunked = false, noOr
     };
     if (payload !== undefined && !chunked) allHeaders["content-length"] = Buffer.byteLength(payload);
     // agent: false, a fresh connection each time: the server drops the socket after refusing an oversized upload.
-    const req = http.request({ host: "localhost", port, path: "/api/waitlist", method, headers: allHeaders, agent: false }, (res) => {
+    const req = http.request({ host: "localhost", port, path: urlPath, method, headers: allHeaders, agent: false }, (res) => {
       let text = "";
       res.on("data", (c) => (text += c));
       res.on("end", () => resolve({ status: res.statusCode, text, headers: res.headers }));
@@ -131,13 +139,40 @@ const validBody = (email, extra = {}) => ({ email, role: ROLE, country: "India",
 
 // ---------------------------------------------------------------- servers
 
+/** Stands in for Resend: captures every message so the test can follow its link. */
+const mails = [];
+let mailFailures = 0;
+const mailServer = http.createServer((req, res) => {
+  let text = "";
+  req.on("data", (c) => (text += c));
+  req.on("end", () => {
+    if (mailFailures > 0) {
+      mailFailures -= 1;
+      res.statusCode = 500;
+      return res.end("{}");
+    }
+    mails.push({ ...JSON.parse(text), authorization: req.headers.authorization });
+    res.setHeader("content-type", "application/json");
+    res.end('{"id":"test"}');
+  });
+});
+const mailsTo = (email) => mails.filter((m) => m.to[0] === email);
+const tokenOf = (mail) => mail.text.match(/#token=([\w-]+)/)?.[1];
+const TEST_RESEND_KEY = "test-resend-key-not-real";
+const MAIL_ENV = {
+  RESEND_API_KEY: TEST_RESEND_KEY,
+  WAITLIST_FROM_EMAIL: "SAANS <test@example.com>",
+  RESEND_API_URL: `http://localhost:${PORTS.mail}/emails`,
+  SITE_URL: `http://localhost:${PORTS.main}`,
+};
+
 const logs = [];
 const servers = [];
 function startSite(port, overrides = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "-p", String(port)], {
       cwd: ROOT,
-      env: { ...process.env, ...overrides },
+      env: { ...process.env, ...MAIL_ENV, ...overrides },
       stdio: ["ignore", "pipe", "pipe"],
     });
     servers.push(child);
@@ -222,19 +257,25 @@ async function assertClean(label, { page, seen }, allowedStatus) {
 // ---------------------------------------------------------------- scenarios
 
 async function databaseAndPostgrest() {
-  const table = (
-    await db.query(`select relrowsecurity from pg_class where oid = 'public.waitlist'::regclass`)
-  ).rows[0];
-  check("RLS is enabled", table.relrowsecurity === true);
-  const policies = await db.query(`select 1 from pg_policies where schemaname='public' and tablename='waitlist'`);
-  check("table has no RLS policies", policies.rowCount === 0, `${policies.rowCount} policies`);
-  for (const role of ["anon", "authenticated"]) {
+  for (const tableName of ["waitlist", "waitlist_pending"]) {
+    const table = (await db.query(`select relrowsecurity from pg_class where oid = 'public.${tableName}'::regclass`)).rows[0];
+    check(`${tableName}: RLS is enabled`, table.relrowsecurity === true);
+    const policies = await db.query(`select 1 from pg_policies where schemaname='public' and tablename=$1`, [tableName]);
+    check(`${tableName}: no RLS policies`, policies.rowCount === 0, `${policies.rowCount} policies`);
+    for (const role of ["anon", "authenticated"]) {
+      const { rows } = await db.query(
+        `select bool_or(has_table_privilege($1, 'public.${tableName}', p)) as any_priv
+         from unnest(array['select','insert','update','delete','truncate','references','trigger']) as p`,
+        [role],
+      );
+      check(`${tableName}: ${role} holds no privileges`, rows[0].any_priv === false);
+    }
+  }
+  for (const fn of ["waitlist_request(text,text,text,text,boolean,text,text)", "waitlist_cancel(text)", "waitlist_confirm(text)"]) {
     const { rows } = await db.query(
-      `select bool_or(has_table_privilege($1, 'public.waitlist', p)) as any_priv
-       from unnest(array['select','insert','update','delete','truncate','references','trigger']) as p`,
-      [role],
+      `select has_function_privilege('anon', 'public.${fn}', 'execute') as anon, has_function_privilege('authenticated', 'public.${fn}', 'execute') as auth, has_function_privilege('service_role', 'public.${fn}', 'execute') as server`,
     );
-    check(`${role} holds no privileges on the table`, rows[0].any_priv === false);
+    check(`${fn.split("(")[0]}: only the server can call it`, !rows[0].anon && !rows[0].auth && rows[0].server, JSON.stringify(rows[0]));
   }
 
   const dbErr = async (fn) => {
@@ -273,7 +314,12 @@ async function databaseAndPostgrest() {
       headers: { ...headers, "Content-Type": "application/json" },
       body: JSON.stringify({ email: anonEmail, role: "x", source: "modal" }),
     });
-    check(`${label} cannot insert through PostgREST`, [401, 403].includes(write.status) && (await rowsFor(anonEmail)).length === 0, `${write.status}`);
+    check(`${label} cannot insert through PostgREST`, [401, 403].includes(write.status) && (await listedFor(anonEmail)).length === 0, `${write.status}`);
+
+    const pendingRead = await fetch(`${SUPABASE_URL}/rest/v1/waitlist_pending?select=*`, { headers });
+    check(`${label} cannot read the unconfirmed requests`, [401, 403].includes(pendingRead.status), `${pendingRead.status}`);
+    const rpc = await fetch(`${SUPABASE_URL}/rest/v1/rpc/waitlist_confirm`, { method: "POST", headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify({ p_token_hash: "0".repeat(64) }) });
+    check(`${label} cannot call the confirm function`, [401, 403, 404].includes(rpc.status), `${rpc.status}`);
 
     const patch = await fetch(`${rest}?email=eq.${encodeURIComponent(sqlEmail)}`, {
       method: "PATCH",
@@ -281,7 +327,7 @@ async function databaseAndPostgrest() {
       body: JSON.stringify({ role: "hacked" }),
     });
     const del = await fetch(`${rest}?email=eq.${encodeURIComponent(sqlEmail)}`, { method: "DELETE", headers });
-    const after = await rowsFor(sqlEmail);
+    const after = await listedFor(sqlEmail);
     check(`${label} cannot update or delete through PostgREST`, after.length === 1 && after[0].role === "x", `PATCH ${patch.status}, DELETE ${del.status}`);
   }
 
@@ -296,6 +342,10 @@ async function databaseAndPostgrest() {
 
   const direct = await fetch(`${rest}?email=eq.${encodeURIComponent(sqlEmail)}`, { method: "DELETE", headers: secretHeaders });
   check("the secret key has no delete privilege (least privilege)", !direct.ok, `${direct.status}`);
+  const directPatch = await fetch(`${rest}?email=eq.${encodeURIComponent(sqlEmail)}`, { method: "PATCH", headers: { ...secretHeaders, "Content-Type": "application/json" }, body: JSON.stringify({ role: "hacked" }) });
+  check("the secret key has no update privilege (least privilege)", !directPatch.ok, `${directPatch.status}`);
+  const directPending = await fetch(`${SUPABASE_URL}/rest/v1/waitlist_pending?select=*`, { headers: secretHeaders });
+  check("the secret key can't read unconfirmed requests directly", !directPending.ok, `${directPending.status}`);
 }
 
 async function apiAbuse() {
@@ -380,6 +430,7 @@ async function apiAbuse() {
   const pick = (x) => ({ status: x.status, text: x.text, headers: Object.keys(x.headers).filter((h) => h !== "date").sort() });
   check("new and duplicate signups get identical responses", JSON.stringify(pick(first)) === JSON.stringify(pick(second)), `${first.status} ${first.text} / ${second.status} ${second.text}`);
   const dupRows = await rowsFor(email);
+  check("duplicate sent only one email", mailsTo(email).length === 1, `${mailsTo(email).length} email(s)`);
   check("duplicate kept one lowercase row", dupRows.length === 1 && dupRows[0].email === email, `${dupRows.length} row(s), ${dupRows[0]?.email}`);
   check("duplicate did not overwrite the first answers", dupRows[0]?.role === ROLE && dupRows[0]?.country === "India" && dupRows[0]?.wants_survey === false);
   check("response is not cacheable", first.headers["cache-control"] === "no-store", first.headers["cache-control"]);
@@ -486,6 +537,7 @@ async function modalFlows(name) {
     const rows = await rowsFor(signup);
     check(label("still one row, first answers kept"), rows.length === 1 && rows[0].role === ROLE && rows[0].country === "India", `${rows.length} row(s), role=${rows[0]?.role}`);
     check(label("duplicate reached the server"), seen.apiRequests.length === 1);
+    check(label("duplicate sent no second email"), mailsTo(signup).length === 1, `${mailsTo(signup).length} email(s)`);
     await assertClean(label("duplicate"), tab);
     await tab.context.close();
   }
@@ -546,7 +598,7 @@ async function modalFlows(name) {
     await submitModal(dialog);
     await dialog.getByRole("heading", { name: SUCCESS }).waitFor();
     check(label("honeypot filled: same success shown"), true, SUCCESS);
-    check(label("honeypot filled: no row"), (await rowsFor(email)).length === 0);
+    check(label("honeypot filled: no row, no email"), (await rowsFor(email)).length === 0 && mailsTo(email).length === 0);
     await tab.context.close();
   }
 
@@ -623,6 +675,165 @@ async function questionsByRole(name) {
     check(`[${name}] last section: ${role} ${hasHelp ? "gets" : "doesn't need"} the help link`, ((await join.getByText("get help now").count()) === 1) === hasHelp);
   }
   await tab.context.close();
+}
+
+/** The whole journey in a browser: form, email, link, button, list. */
+async function confirmJourney(name) {
+  const label = (s) => `[${name}] confirm: ${s}`;
+  const email = newEmail(`journey-${name}`);
+  const tab = await openPage(name, PORTS.main);
+  const dialog = await fillModal(tab.page, { email, country: "India", struggles: STRUGGLES_TEXT, survey: true });
+  await submitModal(dialog);
+  await dialog.getByRole("heading", { name: SUCCESS }).waitFor();
+  await tab.page.screenshot({ path: path.join(SHOTS, `${name}-modal-inbox.png`) });
+
+  const sent = mailsTo(email);
+  const mail = sent[0];
+  check(label("one email to that address"), sent.length === 1, `${sent.length} email(s)`);
+  check(label("email says nothing about why they joined"), !!mail && !JSON.stringify(mail).includes(STRUGGLES_TEXT) && !JSON.stringify(mail).includes(ROLE) && !/hard|struggl|mental/i.test(mail.subject + mail.text));
+  check(label("email authenticates with the configured key"), mail?.authorization === `Bearer ${TEST_RESEND_KEY}`);
+  const token = tokenOf(mail);
+  const link = mail.text.match(/http\S+#token=[\w-]+/)?.[0];
+  check(label("link points at the configured site, token in the fragment"), !!link && link.startsWith(`http://localhost:${PORTS.main}/waitlist/confirm#token=`), (link || "").slice(0, 60));
+  check(label("html and text carry the same link"), mail.html.includes(link));
+
+  const [pending] = await rowsFor(email);
+  check(label("only the token's hash is stored"), pending?.token_hash === createHash("sha256").update(token).digest("hex") && !JSON.stringify(pending).includes(token));
+  check(label("expires in about 7 days"), Math.abs(new Date(pending?.expires_at) - Date.now() - 7 * 864e5) < 6e5);
+  check(label("not on the list before confirming"), (await listedFor(email)).length === 0);
+
+  const page = await tab.context.newPage();
+  await page.goto(link, { waitUntil: "load" });
+  const button = page.getByRole("button", { name: "Confirm my spot" });
+  await button.waitFor();
+  await page.waitForTimeout(800);
+  check(label("opening the link confirms nothing (email scanners open links)"), (await listedFor(email)).length === 0 && (await rowsFor(email)).length === 1);
+  await page.screenshot({ path: path.join(SHOTS, `${name}-confirm-page.png`) });
+  await button.click();
+  await page.getByRole("heading", { name: CONFIRMED }).waitFor();
+  await page.screenshot({ path: path.join(SHOTS, `${name}-confirmed.png`) });
+
+  const [row] = await listedFor(email);
+  check(label("on the list with their own answers"), !!row && row.role === ROLE && row.country === "India" && row.struggles === STRUGGLES_TEXT && row.wants_survey === true && row.source === "modal" && !!row.confirmed_at);
+  check(label("request removed"), (await rowsFor(email)).length === 0);
+  check(label("token no longer in the address bar"), !page.url().includes("token"));
+
+  const again = await tab.context.newPage();
+  await again.goto(link, { waitUntil: "load" });
+  await again.getByRole("button", { name: "Confirm my spot" }).click();
+  await again.getByRole("heading", { name: "This link has expired or was already used." }).waitFor();
+  check(label("the link works only once"), true);
+  const stray = (await again.evaluate(() => window.__csp)) || [];
+  check(label("no CSP violations on the confirm page"), stray.length === 0, stray.join(" | "));
+
+  const none = await tab.context.newPage();
+  await none.goto(`http://localhost:${PORTS.main}/waitlist/confirm`, { waitUntil: "load" });
+  await none.getByRole("heading", { name: "This link has expired or was already used." }).waitFor();
+  check(label("no token: says so, and offers to join"), (await none.getByRole("button", { name: "Join the waitlist" }).count()) >= 1);
+  await tab.context.close();
+}
+
+/** The rules behind the journey, through the real API and the real database functions. */
+async function confirmRules() {
+  const port = PORTS.main;
+  const join = (email, extra) => send(port, { body: validBody(email, extra) });
+  const confirm = (token, opts = {}) => send(port, { path: "/api/waitlist/confirm", body: { token }, ...opts });
+  let email = newEmail("rejoin");
+  await join(email);
+  await confirm(tokenOf(mailsTo(email)[0]));
+  const before = (await listedFor(email))[0];
+  let r = await join(email, { role: "A clinician", country: "Other" });
+  const after = (await listedFor(email))[0];
+  check("joining again once confirmed: same reply, no email, nothing changes", r.status === 200 && r.text === '{"ok":true}' && mailsTo(email).length === 1 && (await rowsFor(email)).length === 0 && after.role === before.role && after.country === before.country);
+
+  // someone types a stranger's address first
+  email = newEmail("squat");
+  await join(email, { role: "From a college", struggles: "written by someone else" });
+  await backdate(email, "created_at", "11 minutes");
+  await join(email, { role: ROLE, struggles: "written by the real owner" });
+  const [squatterMail, ownerMail] = mailsTo(email);
+  check("each request gets its own link", !!ownerMail && tokenOf(squatterMail) !== tokenOf(ownerMail));
+  r = await confirm(tokenOf(ownerMail));
+  const [owner] = await listedFor(email);
+  check("the real owner's confirmation keeps only their own answers", r.status === 200 && owner?.role === ROLE && owner?.struggles === "written by the real owner");
+  check("every other request for that address is gone", (await rowsFor(email)).length === 0);
+  r = await confirm(tokenOf(squatterMail));
+  check("the other person's link stops working", r.status === 410 && (await listedFor(email))[0].struggles === "written by the real owner", `${r.status}`);
+
+  // a row from before confirmation existed
+  email = newEmail("legacy");
+  await db.query("insert into public.waitlist (email, role, source) values ($1, 'From a college', 'modal')", [email]);
+  r = await join(email, { role: ROLE });
+  check("an old unconfirmed row can still get a link", r.status === 200 && mailsTo(email).length === 1);
+  await confirm(tokenOf(mailsTo(email)[0]));
+  const [legacy] = await listedFor(email);
+  check("confirming it marks that row confirmed, with the new answers", !!legacy?.confirmed_at && legacy.role === ROLE && (await listedFor(email)).length === 1);
+
+  // expiry
+  email = newEmail("expired");
+  await join(email);
+  await backdate(email, "expires_at", "8 days");
+  r = await confirm(tokenOf(mailsTo(email)[0]));
+  check("an expired link is refused and adds nobody", r.status === 410 && (await listedFor(email)).length === 0, `${r.status}`);
+  await join(newEmail("sweeper"));
+  check("expired requests are deleted when the next request comes in", (await rowsFor(email)).length === 0);
+  const cron = await db.query("select schedule from cron.job where jobname = 'purge-waitlist-pending'");
+  check("a daily job deletes expired requests on quiet days too", cron.rowCount === 1, cron.rows[0]?.schedule);
+
+  // inbox flooding
+  email = newEmail("flood");
+  for (let i = 0; i < 5; i++) await join(email);
+  check("five quick requests send one email", mailsTo(email).length === 1, `${mailsTo(email).length} email(s)`);
+  for (let i = 0; i < 4; i++) {
+    await backdate(email, "created_at", "11 minutes");
+    await join(email);
+  }
+  check("at most three emails a day to one address", mailsTo(email).length === 3, `${mailsTo(email).length} email(s)`);
+
+  // provider failure
+  email = newEmail("mailfail");
+  mailFailures = 1;
+  r = await join(email);
+  check("a failed email is an error, not success", r.status === 503, `${r.status}`);
+  check("… and leaves no request behind", (await rowsFor(email)).length === 0);
+  r = await join(email);
+  check("… so trying again works straight away", r.status === 200 && mailsTo(email).length === 1 && (await rowsFor(email)).length === 1);
+
+  // same timing whether or not someone is on the list
+  const timed = async (e) => { const t = Date.now(); await join(e); return Date.now() - t; };
+  const known = newEmail("timed");
+  await join(known);
+  await confirm(tokenOf(mailsTo(known)[0]));
+  const onList = await timed(known);
+  const fresh = await timed(newEmail("timedfresh"));
+  check("a listed address doesn't answer faster than a new one", onList >= 1400 && fresh >= 1400 && Math.abs(onList - fresh) < 400, `${onList} ms / ${fresh} ms`);
+
+  // the confirm route itself
+  r = await send(port, { method: "GET", path: "/api/waitlist/confirm" });
+  check("confirm: GET is not allowed, so a scanner can't confirm", r.status === 405, `${r.status}`);
+  email = newEmail("cc");
+  await join(email);
+  const token = tokenOf(mailsTo(email)[0]);
+  r = await confirm(token, { headers: { origin: "https://evil.example" } });
+  check("confirm: another website is refused", r.status === 403 && (await listedFor(email)).length === 0, `${r.status}`);
+  r = await confirm(token, { noOrigin: true });
+  check("confirm: missing Origin is refused", r.status === 403 && (await listedFor(email)).length === 0, `${r.status}`);
+  r = await send(port, { path: "/api/waitlist/confirm", body: "{}", headers: { "content-type": "text/plain" } });
+  check("confirm: non-JSON is refused", r.status === 415, `${r.status}`);
+  for (const [what, bad, want] of [["empty", "", 400], ["short", "abc", 400], ["wrong characters", "x".repeat(42) + "!", 400], ["not text", { a: 1 }, 400], ["well formed but unknown", "A".repeat(43), 410]]) {
+    r = await confirm(bad);
+    check(`confirm: ${what} token is refused`, r.status === want, `${r.status} ${r.text}`);
+  }
+  r = await send(port, { path: "/api/waitlist/confirm", body: { token: "x".repeat(1000) } });
+  check("confirm: oversized body is refused", r.status === 413, `${r.status}`);
+  const ip = uniqueIp();
+  const codes = [];
+  for (let i = 0; i < 21; i++) codes.push((await send(port, { path: "/api/waitlist/confirm", body: {}, headers: { "x-real-ip": ip } })).status);
+  check("confirm: guessing is rate limited", codes[20] === 429, `21st: ${codes[20]}`);
+  const forged = newEmail("forgedhost");
+  await send(port, { body: validBody(forged), headers: { host: "evil.example", origin: "http://evil.example", "x-forwarded-host": "evil.example" } });
+  const forgedMail = mailsTo(forged)[0];
+  check("a forged Host header never reaches the email's link", !forgedMail || !forgedMail.text.includes("evil.example"));
 }
 
 async function backendFailure(name, port, what) {
@@ -730,14 +941,15 @@ async function noSecretInClient() {
   const staticFiles = walk(path.join(ROOT, ".next", "static"));
   const texts = staticFiles.filter((f) => /\.(js|css|json|html|txt|map)$/.test(f)).map((f) => readFileSync(f, "utf8"));
   const pages = [];
-  for (const route of ["/", "/privacy", "/help", "/about", "/faq", "/privacy-policy", "/terms"]) {
+  for (const route of ["/", "/privacy", "/help", "/about", "/faq", "/privacy-policy", "/terms", "/waitlist/confirm"]) {
     pages.push(await (await fetch(`http://localhost:${PORTS.main}${route}`)).text());
   }
   const all = [...texts, ...pages];
   const has = (needle) => all.some((t) => t.includes(needle));
   check("control: the client chunks do contain the route path", has("/api/waitlist"), `${texts.length} client files, ${pages.length} pages searched`);
   check("secret key value not in client chunks or page HTML", !has(SUPABASE_SECRET_KEY));
-  check("env var names not in client chunks or page HTML", !has("SUPABASE_SECRET_KEY") && !has("SUPABASE_URL"));
+  check("env var names not in client chunks or page HTML", !has("SUPABASE_SECRET_KEY") && !has("SUPABASE_URL") && !has("RESEND_API_KEY"));
+  check("email provider not in client chunks or page HTML", !has(TEST_RESEND_KEY) && !has("api.resend.com"));
   check("Supabase URL not in client chunks or page HTML", !has(SUPABASE_URL));
   check("Supabase client library not in client chunks", !has("supabase"));
   check("zod not in client chunks (server only)", !has("ZodError"));
@@ -748,7 +960,11 @@ function logsAreClean() {
   const leaked = [...usedEmails].filter((e) => text.includes(e.toLowerCase()));
   check("server logs contain no submitted email", leaked.length === 0, `${usedEmails.size} addresses searched in ${text.length} bytes`);
   check("server logs contain nothing people wrote", !text.includes(STRUGGLES_TEXT.toLowerCase()));
-  check("server logs contain no secret key", !text.includes(SUPABASE_SECRET_KEY.toLowerCase()));
+  check("server logs contain no secret key", !text.includes(SUPABASE_SECRET_KEY.toLowerCase()) && !text.includes(TEST_RESEND_KEY.toLowerCase()));
+  const tokens = mails.map(tokenOf).filter(Boolean);
+  check("server logs contain no confirmation link", tokens.length > 0 && !tokens.some((t) => text.includes(t.toLowerCase())), `${tokens.length} tokens searched`);
+  const noMailLog = logs.find((l) => l.port === PORTS.noMail)?.text ?? "";
+  check("a missing email key is named in the server log", noMailLog.includes("RESEND_API_KEY and WAITLIST_FROM_EMAIL must both be set"));
   const noEnvLog = logs.find((l) => l.port === PORTS.noEnv)?.text ?? "";
   check("missing env vars are named in the server log", noEnvLog.includes("SUPABASE_URL and SUPABASE_SECRET_KEY must both be set"));
   const deadLog = logs.find((l) => l.port === PORTS.dead)?.text ?? "";
@@ -756,7 +972,7 @@ function logsAreClean() {
 
   if (!isLocalStack) return skip("Postgres and PostgREST container logs contain no signup email", "needs the local stack");
   // The SQL constraint checks insert addresses by hand and fail on purpose, so those are expected in here.
-  const signups = [...usedEmails].filter((e) => !e.includes("-sql@") && !e.includes("-anon@"));
+  const signups = [...usedEmails].filter((e) => !e.includes("-sql@") && !e.includes("-longsql@") && !e.includes("-anon@"));
   const containers = ["supabase_db_saans", "supabase_rest_saans", "supabase_kong_saans"];
   const out = containers.map((c) => {
     const r = spawnSync("docker", ["logs", "--since", "30m", c], { encoding: "utf8", maxBuffer: 1 << 28 });
@@ -774,22 +990,27 @@ try {
   await db.connect();
   db.on("error", () => {});
 
+  await new Promise((resolve) => mailServer.listen(PORTS.mail, resolve));
   browser = await chromium.launch({ executablePath: BROWSER_PATH, headless: true });
   await startSite(PORTS.main);
   await startSite(PORTS.dead, { SUPABASE_URL: "http://127.0.0.1:9" });
   await startSite(PORTS.badKey, { SUPABASE_SECRET_KEY: "wrong-key" });
   await startSite(PORTS.noEnv, { SUPABASE_URL: "", SUPABASE_SECRET_KEY: "" });
+  await startSite(PORTS.noMail, { RESEND_API_KEY: "" });
 
   await section("Database and PostgREST", databaseAndPostgrest);
   await section("API abuse protection (raw HTTP)", apiAbuse);
   await section("Cross-origin from a real browser", crossOriginFromBrowser);
+  await section("Confirmation rules", confirmRules);
   for (const name of Object.keys(VIEWPORTS)) {
     await section(`Modal and home page form at ${name} width`, () => modalFlows(name));
     await section(`Questions by audience at ${name} width`, () => questionsByRole(name));
+    await section(`Confirmation journey at ${name} width`, () => confirmJourney(name));
     await section(`Backend problems at ${name} width`, async () => {
       await backendFailure(name, PORTS.dead, "dead Supabase URL");
       await backendFailure(name, PORTS.badKey, "wrong secret key");
       await backendFailure(name, PORTS.noEnv, "env vars missing");
+      await backendFailure(name, PORTS.noMail, "email key missing");
     });
   }
   await section("CSP", csp);
@@ -807,10 +1028,15 @@ try {
 } finally {
   await browser?.close().catch(() => {});
   for (const s of servers) s.kill();
-  const del = await db
-    .query("delete from public.waitlist where email like $1", [`e2e-${runId}-%`])
-    .catch((e) => console.error(`Cleanup failed: ${e.message}`));
-  if (del) console.log(`Cleaned up ${del.rowCount} test row(s).`);
+  mailServer.close();
+  let cleaned = 0;
+  for (const table of ["waitlist", "waitlist_pending"]) {
+    const del = await db
+      .query(`delete from public.${table} where email like $1`, [`e2e-${runId}-%`])
+      .catch((e) => console.error(`Cleanup failed: ${e.message}`));
+    if (del) cleaned += del.rowCount;
+  }
+  console.log(`Cleaned up ${cleaned} test row(s).`);
   await db.end().catch(() => {});
 }
 process.exit(exitCode);

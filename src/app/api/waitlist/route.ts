@@ -1,55 +1,29 @@
 import { HONEYPOT_FIELD } from "@/lib/waitlist/constants";
+import { assertMailConfigured, newToken, sendConfirmEmail, WaitlistEmailError } from "@/lib/waitlist/email";
+import { failed, isSameOrigin, readBody, reply } from "@/lib/waitlist/http";
 import { waitlistSchema } from "@/lib/waitlist/schema";
 import { clientIp, isRateLimited } from "@/lib/waitlist/rate-limit";
-import { addToWaitlist, WaitlistConfigError, WaitlistStoreError } from "@/lib/waitlist/server";
+import { cancelSignup, requestSignup, WaitlistConfigError, WaitlistStoreError } from "@/lib/waitlist/server";
 
 // Room for the longest answer in any script: 1,000 characters can be 4,000 bytes.
 const MAX_BODY_BYTES = 6_144;
 
-function reply(status: number, body: Record<string, unknown>) {
-  return Response.json(body, { status, headers: { "Cache-Control": "no-store" } });
-}
-
-/** A new signup, a duplicate and a honeypot hit all return exactly this. */
-const accepted = () => reply(200, { ok: true });
-const failed = (status: number, error: string) => reply(status, { ok: false, error });
-
-function isSameOrigin(req: Request) {
-  const fetchSite = req.headers.get("sec-fetch-site");
-  if (fetchSite && fetchSite !== "same-origin") return false;
-
-  const origin = req.headers.get("origin");
-  // Next.js fills x-forwarded-host from Host when no proxy has set it.
-  const host = req.headers.get("x-forwarded-host")?.split(",")[0]?.trim() || req.headers.get("host");
-  if (!origin || !host) return false;
-  try {
-    return new URL(origin).host === host;
-  } catch {
-    return false;
-  }
-}
-
-/** Reads the body up to the limit. Content-Length can be absent or wrong, so the stream is what counts. */
-async function readBody(req: Request) {
-  if (Number(req.headers.get("content-length") ?? 0) > MAX_BODY_BYTES) return null;
-  const reader = req.body?.getReader();
-  if (!reader) return "";
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    size += value.byteLength;
-    if (size > MAX_BODY_BYTES) {
-      await reader.cancel();
-      return null;
-    }
-    chunks.push(value);
-  }
-  return Buffer.concat(chunks).toString("utf8");
-}
+/**
+ * Sending an email takes time, so without this an address already on the list (no email) would answer
+ * faster than a new one, and the delay would reveal who has joined. Every accepted request takes at least
+ * this long.
+ */
+const MIN_ACCEPTED_MS = 1_500;
 
 export async function POST(req: Request) {
+  const startedAt = Date.now();
+  /** A new signup, a duplicate and a honeypot hit all return exactly this, after the same delay. */
+  const accepted = async () => {
+    const left = MIN_ACCEPTED_MS - (Date.now() - startedAt);
+    if (left > 0) await new Promise((r) => setTimeout(r, left));
+    return reply(200, { ok: true });
+  };
+
   if (!isSameOrigin(req)) return failed(403, "forbidden");
   // Requiring JSON also means a cross-site fetch must pass a CORS preflight, which this route never allows.
   if (!req.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
@@ -57,7 +31,7 @@ export async function POST(req: Request) {
   }
   if (isRateLimited(clientIp(req.headers))) return failed(429, "rate_limited");
 
-  const raw = await readBody(req);
+  const raw = await readBody(req, MAX_BODY_BYTES);
   if (raw === null) return failed(413, "too_large");
 
   let body: unknown;
@@ -76,17 +50,23 @@ export async function POST(req: Request) {
   if (!parsed.success) return failed(400, "invalid");
 
   const { email, role, country, struggles, survey, source } = parsed.data;
+  const { token, tokenHash } = newToken();
+  let stored = false;
   try {
-    await addToWaitlist({ email, role, country, struggles, wants_survey: survey, source });
+    assertMailConfigured();
+    stored = await requestSignup({ email, role, country, struggles, wants_survey: survey, source }, tokenHash);
+    if (stored) await sendConfirmEmail(email, token);
   } catch (e) {
     if (e instanceof WaitlistConfigError) {
       console.error(`[waitlist] not configured: ${e.message}`);
-    } else if (e instanceof WaitlistStoreError) {
+    } else if (e instanceof WaitlistStoreError || e instanceof WaitlistEmailError) {
       console.error(`[waitlist] ${e.message}`);
     } else {
       // Network failure or timeout. Only the error's name: its message or cause could carry request data.
       console.error(`[waitlist] backend unreachable (${e instanceof Error ? e.name : "unknown"})`);
     }
+    // Never leave a request behind that no email went out for: it would block a retry.
+    if (stored) await cancelSignup(tokenHash).catch(() => console.error("[waitlist] could not cancel a failed request"));
     return failed(503, "unavailable");
   }
   return accepted();

@@ -91,11 +91,11 @@ export function JoinCta() {
             <span className={styles.doneTick}>
               <Icon name="check" size={17} strokeWidth={2.8} />
             </span>
-            <strong className={styles.doneText}>You&apos;re on the list.</strong>
+            <strong className={styles.doneText}>Check your inbox to confirm your spot.</strong>
           </div>
         )}
 
-        <p className={styles.note}>No spam. One email when we open.</p>
+        <p className={styles.note}>No spam. One email to confirm, one when we open.</p>
       </div>
     </section>
   );

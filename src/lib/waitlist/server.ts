@@ -16,7 +16,7 @@ export class WaitlistStoreError extends Error {
     readonly code: string,
     readonly status: number,
   ) {
-    super(`insert failed (code ${code}, status ${status})`);
+    super(`database call failed (code ${code}, status ${status})`);
   }
 }
 
@@ -38,7 +38,7 @@ function getClient() {
   return client;
 }
 
-export type WaitlistRow = {
+export type WaitlistRequest = {
   email: string;
   role: string;
   country: string | null;
@@ -47,14 +47,35 @@ export type WaitlistRow = {
   source: string;
 };
 
-/**
- * Adds the row, or does nothing if the email is already on the list (ON CONFLICT DO
- * NOTHING). The caller can't tell which happened, and an existing signup's answers
- * can't be overwritten by someone who only knows the address.
- */
-export async function addToWaitlist(row: WaitlistRow) {
-  const { error, status } = await getClient()
-    .from("waitlist")
-    .upsert(row, { onConflict: "email", ignoreDuplicates: true });
+async function call<T>(fn: string, args: Record<string, unknown>) {
+  const { data, error, status } = await getClient().rpc(fn, args);
   if (error) throw new WaitlistStoreError(error.code || "unknown", status);
+  return data as T;
+}
+
+/**
+ * Records a request (see the waitlist_request function in the database). True means a confirmation email
+ * should go out; false means nothing changed, because the address is already confirmed or was emailed
+ * recently. The caller answers the same either way, so the form can't reveal who is on the list.
+ */
+export function requestSignup(r: WaitlistRequest, tokenHash: string) {
+  return call<boolean>("waitlist_request", {
+    p_email: r.email,
+    p_role: r.role,
+    p_country: r.country,
+    p_struggles: r.struggles,
+    p_wants_survey: r.wants_survey,
+    p_source: r.source,
+    p_token_hash: tokenHash,
+  });
+}
+
+/** The email couldn't be sent: forget the request, so the person can try again straight away. */
+export function cancelSignup(tokenHash: string) {
+  return call<void>("waitlist_cancel", { p_token_hash: tokenHash });
+}
+
+/** Moves the request onto the list. False when the link is expired, used or unknown. */
+export function confirmSignup(tokenHash: string) {
+  return call<boolean>("waitlist_confirm", { p_token_hash: tokenHash });
 }

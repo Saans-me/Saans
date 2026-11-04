@@ -20,9 +20,13 @@ success after 700 ms and **send nothing anywhere**.
 
 ## Waitlist setup
 
-The modal and the home page form both POST to the site's own `/api/waitlist`, which writes to the
-`public.waitlist` table with the secret key. The browser never talks to Supabase, and the table has RLS on
-with no policies and no privileges for `anon` or `authenticated`.
+The modal and the home page form both POST to the site's own `/api/waitlist`. It stores the request in
+`public.waitlist_pending` and emails a confirmation link through Resend. Pressing the button on that link's
+page moves the person into `public.waitlist`, so that table holds only confirmed addresses. Unconfirmed
+requests are deleted after 7 days.
+
+The browser never talks to Supabase. Both tables have RLS on with no policies and no privileges for `anon` or
+`authenticated`, and the server changes them only through three database functions.
 
 **1. The table** is already created on the project. Its migration is kept out of this repo
 (`supabase/migrations/` is git-ignored), so a new project needs that file from the team, run once in the
@@ -34,6 +38,9 @@ dashboard's SQL Editor.
 |---|---|
 | `SUPABASE_URL` | Project Settings → Data API → Project URL |
 | `SUPABASE_SECRET_KEY` | Project Settings → API Keys → a secret key (`sb_secret_…`), or the legacy `service_role` key |
+| `RESEND_API_KEY` | Resend → API Keys, with sending access |
+| `WAITLIST_FROM_EMAIL` | The sender on a domain verified in Resend, such as `SAANS <hello@saans.me>` |
+| `SITE_URL` | Optional. The address used in the email's link. Defaults to `https://saans.me` |
 | `TRUSTED_CLIENT_IP_HEADER` | Optional. Leave unset on Vercel. On Netlify: `x-nf-client-connection-ip` |
 
 The secret key bypasses RLS: keep it server-side and never give it a `NEXT_PUBLIC_` prefix.
@@ -45,8 +52,8 @@ Editor; the server's key deliberately can only read and insert.
 ### Testing it
 
 `tests/waitlist.e2e.mjs` drives the real forms in a browser against a production build and a real database.
-Nothing is mocked. It needs Edge and `playwright-core` (paths at the top of the script, or set
-`WAITLIST_TEST_BROWSER` and `WAITLIST_TEST_PLAYWRIGHT_FROM`), free ports 3300–3304, and a git-ignored
+Only the email provider is replaced, by a local server that captures each message so the test can follow its link. It needs Edge and `playwright-core` (paths at the top of the script, or set
+`WAITLIST_TEST_BROWSER` and `WAITLIST_TEST_PLAYWRIGHT_FROM`), free ports 3300–3306, and a git-ignored
 `.env.test.local`:
 
 ```bash

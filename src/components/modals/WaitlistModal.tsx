@@ -23,9 +23,12 @@ export function WaitlistModal() {
           <Icon name="check" size={28} strokeWidth={2.6} />
         </span>
         <h3 id="modal-title" className={styles.doneTitle}>
-          You&apos;re on the list.
+          Check your inbox.
         </h3>
-        <p className={styles.doneText}>Thank you. While you wait, want to try a 1-minute breath?</p>
+        <p className={styles.doneText}>
+          We sent you a link to confirm your spot. It works for 7 days, and it may land in spam. While you wait, want to
+          try a 1-minute breath?
+        </p>
         <div className={styles.doneActions}>
           <button type="button" onClick={() => open("breath")} className="btn btn-primary btn-block">
             Try a 1-minute breath
@@ -51,7 +54,7 @@ export function WaitlistModal() {
         <h2 id="modal-title" className={styles.title}>
           Be one of the first to try SAANS.
         </h2>
-        <p className={styles.sub}>We&apos;ll email you once, when we open. Nothing else.</p>
+        <p className={styles.sub}>One email to confirm, one when we open. Nothing else.</p>
       </div>
       <form onSubmit={f.submit} noValidate className={styles.form}>
         <label className="field-label">

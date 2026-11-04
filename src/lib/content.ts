@@ -71,7 +71,7 @@ export const FOR: ForTab[] = [
 
 export const FAQ: [string, string][] = [
   ["Is SAANS a therapist?", "No. SAANS is an AI companion. It can help you talk things through and notice patterns, and it connects you to real professionals when you need more."],
-  ["When can I use it?", "We're opening to the first users soon. Join the waitlist and we'll email you once."],
+  ["When can I use it?", "We're opening to the first users soon. Join the waitlist and we'll email you when we open."],
   ["Which languages does it speak?", "English, Hindi and Hinglish, by text or voice."],
   ["Who can see my conversations?", "Only you. Your therapist sees only what you choose to share, and your college sees anonymous totals, never names."],
   ["What happens in a crisis?", "SAANS shows helplines right away and, if you've allowed it, messages someone you trust. If you're in danger, call your local emergency number."],
