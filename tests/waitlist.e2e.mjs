@@ -589,6 +589,42 @@ async function modalFlows(name) {
   }
 }
 
+/** Each audience gets its own question, and nobody gets one before saying who they are. */
+async function questionsByRole(name) {
+  const QUESTIONS = [
+    ["Someone looking for support", "What's been hard for you lately?", true],
+    ["A clinician", "What's hardest about your practice right now?", false],
+    ["From a college", "What's your biggest challenge with student wellbeing?", false],
+  ];
+  const tab = await openPage(name, PORTS.main);
+  const { page } = tab;
+  await page.locator("button:visible", { hasText: "Join the waitlist" }).first().click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByRole("heading", { name: "Be one of the first to try SAANS." }).waitFor();
+  const closeModal = page.getByRole("dialog").getByRole("button", { name: /close/i }).first();
+  const forms = [["popup", dialog]];
+  for (const [formName, form] of forms) {
+    check(`[${name}] ${formName}: no question before a role is picked`, (await form.locator("textarea").count()) === 0);
+    for (const [role, question, hasHelp] of QUESTIONS) {
+      await form.getByRole("combobox", { name: "I am" }).click();
+      await page.getByRole("option", { name: role, exact: true }).click();
+      check(`[${name}] ${formName}: ${role} sees their own question`, (await form.getByText(question).count()) === 1 && (await form.locator("textarea").count()) === 1);
+      check(`[${name}] ${formName}: ${role} ${hasHelp ? "gets" : "doesn't need"} the help link`, ((await form.getByText("get help now").count()) === 1) === hasHelp);
+    }
+  }
+  await closeModal.click();
+  const join = page.locator("#join");
+  await join.scrollIntoViewIfNeeded();
+  check(`[${name}] last section: no question before a role is picked`, (await join.locator("textarea").count()) === 0);
+  for (const [role, question, hasHelp] of QUESTIONS) {
+    await join.getByRole("combobox", { name: "I am" }).click();
+    await page.getByRole("option", { name: role, exact: true }).click();
+    check(`[${name}] last section: ${role} sees their own question`, (await join.getByText(question).count()) === 1);
+    check(`[${name}] last section: ${role} ${hasHelp ? "gets" : "doesn't need"} the help link`, ((await join.getByText("get help now").count()) === 1) === hasHelp);
+  }
+  await tab.context.close();
+}
+
 async function backendFailure(name, port, what) {
   const tab = await openPage(name, port);
   const { page } = tab;
@@ -749,6 +785,7 @@ try {
   await section("Cross-origin from a real browser", crossOriginFromBrowser);
   for (const name of Object.keys(VIEWPORTS)) {
     await section(`Modal and home page form at ${name} width`, () => modalFlows(name));
+    await section(`Questions by audience at ${name} width`, () => questionsByRole(name));
     await section(`Backend problems at ${name} width`, async () => {
       await backendFailure(name, PORTS.dead, "dead Supabase URL");
       await backendFailure(name, PORTS.badKey, "wrong secret key");

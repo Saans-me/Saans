@@ -90,7 +90,7 @@ export function WaitlistModal() {
           <span>Country</span>
           <Select ariaLabel="Country" value={v.country} onChange={f.setValue("country")} options={COUNTRY_OPTIONS} />
         </label>
-        <StrugglesField value={v.struggles} onChange={f.set("struggles")} />
+        <StrugglesField role={v.role} value={v.struggles} onChange={f.set("struggles")} />
         <label className={styles.check}>
           <input type="checkbox" checked={!!v.survey} onChange={f.set("survey")} />
           I&apos;d also like to answer a 3-minute survey

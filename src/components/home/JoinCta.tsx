@@ -69,9 +69,11 @@ export function JoinCta() {
                   className={styles.roleBtn}
                 />
               </div>
-              <div className={styles.struggles}>
-                <StrugglesField value={values.struggles} onChange={set("struggles")} />
-              </div>
+              {values.role && (
+                <div className={styles.struggles}>
+                  <StrugglesField role={values.role} value={values.struggles} onChange={set("struggles")} />
+                </div>
+              )}
               <button type="submit" disabled={sending} className={`btn btn-primary ${styles.submit}`}>
                 {sending ? "Joining…" : "Join the waitlist"}
               </button>
