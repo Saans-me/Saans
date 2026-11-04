@@ -1,9 +1,10 @@
 import { HONEYPOT_FIELD } from "@/lib/waitlist/constants";
-import { assertMailConfigured, newToken, sendAlreadyOnListEmail, sendConfirmEmail, WaitlistEmailError } from "@/lib/waitlist/email";
+import { deliverSignupEmail, hashIp, newToken } from "@/lib/waitlist/email";
 import { failed, isSameOrigin, readBody, reply } from "@/lib/waitlist/http";
+import { hourlyMailCap, perIpMailCap } from "@/lib/waitlist/limits";
 import { waitlistSchema } from "@/lib/waitlist/schema";
 import { clientIp, isRateLimited } from "@/lib/waitlist/rate-limit";
-import { cancelSignup, claimAlreadyNotice, requestSignup, WaitlistConfigError, WaitlistStoreError } from "@/lib/waitlist/server";
+import { submitSignup, WaitlistConfigError, WaitlistStoreError } from "@/lib/waitlist/server";
 
 // Room for the longest answer in any script: 1,000 characters can be 4,000 bytes.
 const MAX_BODY_BYTES = 6_144;
@@ -17,7 +18,7 @@ const MIN_ACCEPTED_MS = 1_500;
 
 export async function POST(req: Request) {
   const startedAt = Date.now();
-  /** A new signup, a duplicate and a honeypot hit all return exactly this, after the same delay. */
+  /** Every accepted request returns exactly this, after the same delay, whatever happened to its email. */
   const accepted = async () => {
     const left = MIN_ACCEPTED_MS - (Date.now() - startedAt);
     if (left > 0) await new Promise((r) => setTimeout(r, left));
@@ -29,7 +30,8 @@ export async function POST(req: Request) {
   if (!req.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
     return failed(415, "unsupported_media_type");
   }
-  if (isRateLimited(clientIp(req.headers))) return failed(429, "rate_limited");
+  const ip = clientIp(req.headers);
+  if (isRateLimited(ip)) return failed(429, "rate_limited");
 
   const raw = await readBody(req, MAX_BODY_BYTES);
   if (raw === null) return failed(413, "too_large");
@@ -51,32 +53,19 @@ export async function POST(req: Request) {
 
   const { email, role, country, struggles, survey, source } = parsed.data;
   const { token, tokenHash } = newToken();
-  let stored = false;
+
+  // The form fill is stored first, so nothing that happens to the email can lose it. Only a failure here is shown.
+  let mail;
   try {
-    assertMailConfigured();
-    stored = await requestSignup({ email, role, country, struggles, wants_survey: survey, source }, tokenHash);
-    if (stored) await sendConfirmEmail(email, token);
+    mail = await submitSignup({ email, role, country, struggles, wants_survey: survey, source }, tokenHash, hashIp(ip), { hourly: hourlyMailCap(), perIp: perIpMailCap() });
   } catch (e) {
-    if (e instanceof WaitlistConfigError) {
-      console.error(`[waitlist] not configured: ${e.message}`);
-    } else if (e instanceof WaitlistStoreError || e instanceof WaitlistEmailError) {
-      console.error(`[waitlist] ${e.message}`);
-    } else {
-      // Network failure or timeout. Only the error's name: its message or cause could carry request data.
-      console.error(`[waitlist] backend unreachable (${e instanceof Error ? e.name : "unknown"})`);
-    }
-    // Never leave a request behind that no email went out for: it would block a retry.
-    if (stored) await cancelSignup(tokenHash).catch(() => console.error("[waitlist] could not cancel a failed request"));
+    if (e instanceof WaitlistConfigError) console.error(`[waitlist] not configured: ${e.message}`);
+    else if (e instanceof WaitlistStoreError) console.error(`[waitlist] ${e.message}`);
+    // Network failure or timeout. Only the error's name: its message or cause could carry request data.
+    else console.error(`[waitlist] backend unreachable (${e instanceof Error ? e.name : "unknown"})`);
     return failed(503, "unavailable");
   }
-  // Already on the list, or emailed recently. Their signup is safe, so a problem here is only logged: an
-  // error on screen would show that this address is different from a new one.
-  if (!stored) {
-    try {
-      if (await claimAlreadyNotice(email)) await sendAlreadyOnListEmail(email);
-    } catch (e) {
-      console.error(`[waitlist] already-on-list notice failed (${e instanceof WaitlistEmailError || e instanceof WaitlistStoreError ? e.message : e instanceof Error ? e.name : "unknown"})`);
-    }
-  }
+
+  if (mail) await deliverSignupEmail(mail.email_id, mail.kind, email, token);
   return accepted();
 }

@@ -1,15 +1,14 @@
 import { hashToken } from "@/lib/waitlist/email";
 import { failed, isSameOrigin, readBody, reply } from "@/lib/waitlist/http";
 import { clientIp, isRateLimited } from "@/lib/waitlist/rate-limit";
-import { confirmSignup, WaitlistConfigError, WaitlistStoreError } from "@/lib/waitlist/server";
+import { clickLink, WaitlistConfigError, WaitlistStoreError } from "@/lib/waitlist/server";
+import { TOKEN_RE } from "@/lib/waitlist/token";
 
 const MAX_BODY_BYTES = 256;
-/** 32 random bytes in base64url. Anything else can't be a real token. */
-const TOKEN_RE = /^[A-Za-z0-9_-]{43}$/;
 
 /**
- * Only a POST from the confirm page confirms. Email security tools open every link in a message, so a GET
- * must never do it, or addresses would confirm themselves with nobody there.
+ * The confirm page calls this as soon as it opens, so clicking the email's link is the confirmation. It's a POST
+ * with the token from the URL's fragment, so a tool that only fetches the link can't confirm anything.
  */
 export async function POST(req: Request) {
   if (!isSameOrigin(req)) return failed(403, "forbidden");
@@ -30,7 +29,8 @@ export async function POST(req: Request) {
   if (typeof token !== "string" || !TOKEN_RE.test(token)) return failed(400, "invalid");
 
   try {
-    return (await confirmSignup(hashToken(token))) ? reply(200, { ok: true }) : failed(410, "expired");
+    // Opening the link again, or a second link after the first, is still good news.
+    return (await clickLink(hashToken(token))) === "expired" ? failed(410, "expired") : reply(200, { ok: true });
   } catch (e) {
     if (e instanceof WaitlistConfigError) console.error(`[waitlist] not configured: ${e.message}`);
     else if (e instanceof WaitlistStoreError) console.error(`[waitlist] ${e.message}`);

@@ -91,7 +91,7 @@ export function JoinCta() {
             <span className={styles.doneTick}>
               <Icon name="check" size={17} strokeWidth={2.8} />
             </span>
-            <strong className={styles.doneText}>Check your inbox to confirm your spot.</strong>
+            <strong className={styles.doneText}>Check your inbox to confirm your spot. It can take a few minutes, and sometimes lands in spam.</strong>
           </div>
         )}
 

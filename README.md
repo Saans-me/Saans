@@ -18,13 +18,40 @@ All the forms need Supabase. Until it is configured they show an error, never a 
 
 ## Waitlist setup
 
-The modal and the home page form both POST to the site's own `/api/waitlist`. It stores the request in
-`public.waitlist_pending` and emails a confirmation link through Resend. Pressing the button on that link's
-page moves the person into `public.waitlist`, so that table holds only confirmed addresses. Unconfirmed
-requests are deleted after 7 days. Someone already confirmed who fills in the form again sees the same
-screen as anyone else, and gets a short "you're already on the list" email, at most one a day.
+The modal and the home page form both POST to the site's own `/api/waitlist`. Every form fill is stored in
+`public.waitlist_submissions` first, so nothing that happens to the email can lose it. Only a database failure
+shows an error. Clicking the link in the email is the confirmation: it moves the person into `public.waitlist`,
+so that table holds only confirmed addresses, and it is the only list the launch email may go to.
 
-The browser never talks to Supabase. Both tables have RLS on with no policies and no privileges for `anon` or
+| Read this | For |
+|---|---|
+| `waitlist_overview` | One line per address: status, answers, emails sent, last email's status, clicks |
+| `waitlist` | Confirmed people |
+| `waitlist_submissions` | Every form fill. Unconfirmed rows are unverified: anyone can type anyone's address |
+| `waitlist_emails` | Every email and what happened to it |
+| `waitlist_email_events` | What Resend reported, as received |
+
+Anyone can type anyone's address, so these rules decide when an email goes:
+
+| Situation | Stored | Email |
+|---|---|---|
+| New address | Yes | Confirmation, with a link that lasts 30 days |
+| Filled in again within 7 days | Yes | None |
+| Filled in again after 7 days, still unconfirmed | Yes | One last reminder |
+| Two emails already sent | Yes | None, ever |
+| Sending failed | Yes | The daily job tries again, up to 3 tries. Doesn't count towards the two |
+| Permanent bounce, spam complaint or on Resend's own list | Yes | None, ever |
+| Already confirmed | Yes, `waitlist` doesn't change | "You're already on the list", at most one in 30 days |
+| Pressed "this wasn't me" | No | None, ever |
+| Over 5 emails from one IP in 24 hours | Yes | None for now; it can get one from another IP |
+| Over 50 signup emails in an hour | Yes | Queued for the daily job |
+
+The person sees the same screen in every case, so the form can't reveal who is on the list. The limits are env
+vars (see `.env.example`). `/api/cron/waitlist-mail` is the daily job (`vercel.json`), and `/api/webhooks/resend`
+receives what happened to each email. A new clinician or college form tells the team by email, with who wrote in but not
+what they wrote.
+
+The browser never talks to Supabase. All the tables have RLS on with no policies and no privileges for `anon` or
 `authenticated`, and the server changes them only through database functions.
 
 **1. The table** is already created on the project. Its migration is kept out of this repo
@@ -40,19 +67,23 @@ dashboard's SQL Editor.
 | `RESEND_API_KEY` | Resend → API Keys, with sending access |
 | `WAITLIST_FROM_EMAIL` | The sender on a domain verified in Resend, such as `SAANS <hello@saans.me>` |
 | `SITE_URL` | Optional. The address used in the email's link. Defaults to `https://saans.me` |
+| `RESEND_WEBHOOK_SECRET` | Resend → Webhooks → your endpoint → Signing secret. The endpoint is `https://saans.me/api/webhooks/resend`, with the events sent, delivered, delivery delayed, bounced, complained, failed and suppressed |
+| `CRON_SECRET` | Any long random text. Vercel sends it to the daily job |
+| `WAITLIST_IP_SALT` | Any long random text. Without it, emails per IP aren't limited |
 | `TRUSTED_CLIENT_IP_HEADER` | Optional. Leave unset on Vercel. On Netlify: `x-nf-client-connection-ip` |
 
 The secret key bypasses RLS: keep it server-side and never give it a `NEXT_PUBLIC_` prefix.
 
-**Limits to know about:** rate limiting is in-memory, so on serverless each instance counts on its own
-(details in `src/lib/waitlist/rate-limit.ts`). To remove someone from the list, delete their row in the SQL
-Editor; the server's key deliberately can only read and insert.
+**Limits to know about:** the general request limit is in-memory, so on serverless each instance counts on its own
+(details in `src/lib/waitlist/rate-limit.ts`); the email limits above are in the database and hold across instances. A college
+can share one IP, so raise `WAITLIST_MAILS_PER_IP` if students report no email. To remove someone from the list by hand,
+use the SQL Editor; the server's key can only reach these tables through the database functions.
 
 ### Testing it
 
 `tests/waitlist.e2e.mjs` drives the real forms in a browser against a production build and a real database.
 Only the email provider is replaced, by a local server that captures each message so the test can follow its link. It needs Edge and `playwright-core` (paths at the top of the script, or set
-`WAITLIST_TEST_BROWSER` and `WAITLIST_TEST_PLAYWRIGHT_FROM`), free ports 3300–3306, and a git-ignored
+`WAITLIST_TEST_BROWSER` and `WAITLIST_TEST_PLAYWRIGHT_FROM`), free ports 3300–3308, and a git-ignored
 `.env.test.local`:
 
 ```bash
@@ -68,6 +99,7 @@ npm run build && npm run test:waitlist
 ```
 
 Against a hosted project it writes only rows with a per-run `e2e-…@example.com` address and deletes those at the end.
+The daily job's sending is tested only on the local stack, because it acts on every due email in the database.
 
 ## Pages
 

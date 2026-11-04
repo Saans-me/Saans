@@ -26,8 +26,8 @@ export function WaitlistModal() {
           Check your inbox.
         </h3>
         <p className={styles.doneText}>
-          We sent you a link to confirm your spot. It works for 7 days, and it may land in spam. While you wait, want to
-          try a 1-minute breath?
+          Your link to confirm can take a few minutes, and sometimes lands in spam. While you wait, want to try a
+          1-minute breath?
         </p>
         <div className={styles.doneActions}>
           <button type="button" onClick={() => open("breath")} className="btn btn-primary btn-block">

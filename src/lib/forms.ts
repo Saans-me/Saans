@@ -15,7 +15,8 @@ export const ERR_REQUIRED = "Please fill in the required fields.";
 export const ERR_GENERIC = "Something went wrong. Please try again.";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-const POST_TIMEOUT_MS = 15_000;
+// Longer than the server's worst case: two database tries and one email.
+const POST_TIMEOUT_MS = 25_000;
 
 export function roleType(role: string): FormType {
   return role === "A clinician" ? "clinician" : role === "From a college" ? "college" : "user";

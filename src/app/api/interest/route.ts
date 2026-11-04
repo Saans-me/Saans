@@ -1,8 +1,10 @@
 import { HONEYPOT_FIELD } from "@/lib/waitlist/constants";
+import { deliverTeamNotice, teamAddress } from "@/lib/waitlist/email";
 import { failed, isSameOrigin, readBody, reply } from "@/lib/waitlist/http";
 import { interestSchema } from "@/lib/waitlist/interest";
+import { teamNoticeDailyCap } from "@/lib/waitlist/limits";
 import { clientIp, isRateLimited } from "@/lib/waitlist/rate-limit";
-import { addInterest, WaitlistConfigError, WaitlistStoreError } from "@/lib/waitlist/server";
+import { addInterest, startTeamNotice, WaitlistConfigError, WaitlistStoreError } from "@/lib/waitlist/server";
 
 // Room for the longest answers in any script: 2,000 characters can be 8,000 bytes.
 const MAX_BODY_BYTES = 10_240;
@@ -34,13 +36,24 @@ export async function POST(req: Request) {
   if (!parsed.success) return failed(400, "invalid");
 
   const { type, ...row } = parsed.data;
+  const table = type === "clinician" ? "clinician_interest" : "college_interest";
+  let interestId: string;
   try {
-    await addInterest(type === "clinician" ? "clinician_interest" : "college_interest", row);
+    interestId = await addInterest(table, row);
   } catch (e) {
     if (e instanceof WaitlistConfigError) console.error(`[interest] not configured: ${e.message}`);
     else if (e instanceof WaitlistStoreError) console.error(`[interest] ${e.message}`);
     else console.error(`[interest] backend unreachable (${e instanceof Error ? e.name : "unknown"})`);
     return failed(503, "unavailable");
+  }
+
+  // The form is saved, so a problem from here on is only logged.
+  try {
+    const to = teamAddress();
+    const noticeId = await startTeamNotice(to, table, interestId, teamNoticeDailyCap());
+    if (noticeId) await deliverTeamNotice(noticeId, to, table, { name: row.name, email: row.email, role: row.role });
+  } catch (e) {
+    console.error(`[interest] team notice not started (${e instanceof WaitlistStoreError ? e.message : e instanceof Error ? e.name : "unknown"})`);
   }
   return reply(200, { ok: true });
 }
