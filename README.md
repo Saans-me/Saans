@@ -14,9 +14,7 @@ npm run dev                  # http://localhost:3000
 npm run build && npm start   # production
 ```
 
-The waitlist forms need Supabase. Until it is configured they show an error, never a fake success.
-The clinician and college forms are separate: without `NEXT_PUBLIC_FORM_ENDPOINT` they still simulate
-success after 700 ms and **send nothing anywhere**.
+All the forms need Supabase. Until it is configured they show an error, never a fake success.
 
 ## Waitlist setup
 
@@ -106,7 +104,7 @@ src/
   `<ModalButton modal="…">` from server components. One `ModalShell` handles scrim, focus trap, Esc,
   focus return, scroll lock, enter/exit animation and the phone bottom sheet.
 - **Forms**: `lib/forms.ts`. Waitlist forms → `/api/waitlist` → Supabase (`lib/waitlist/`). Clinician and college
-  forms → single POST to `NEXT_PUBLIC_FORM_ENDPOINT` with `type: clinician | college`.
+  forms → POST to `/api/interest` with `type: clinician | college`, saved to `clinician_interest` and `college_interest`.
 - **Smooth scrolling**: Lenis (`components/layout/SmoothScroll.tsx`), paused under popups; off for reduced motion.
 - **Hero intro**: `[data-intro]` CSS in `globals.css`, started by the `<head>` script once the heading font is ready.
 - **Reveal motion**: any element with `data-reveal="up|scale|fade"` (+ `data-reveal-delay`) animates in once.
@@ -116,7 +114,7 @@ src/
 
 ## Before launch (placeholders)
 
-- `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `NEXT_PUBLIC_FORM_ENDPOINT` and `NEXT_PUBLIC_SITE_URL` (env vars)
+- `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `RESEND_API_KEY`, `WAITLIST_FROM_EMAIL` and `NEXT_PUBLIC_SITE_URL` (env vars)
 - The X / Instagram / LinkedIn links → `src/lib/content.ts`
 - Privacy policy and terms text
 - Film captions → put a `.vtt` in `public/film/` and set `FILM_CAPTIONS` in `src/components/modals/FilmModal.tsx`

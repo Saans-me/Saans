@@ -4,6 +4,8 @@ import { useModal } from "@/context/ModalContext";
 import { Icon } from "@/components/shared/Icon";
 import { COLLEGE_ROLES, STUDENT_COUNTS } from "@/lib/content";
 import { Select } from "@/components/shared/Select";
+import { Honeypot } from "@/components/shared/Honeypot";
+import { HONEYPOT_FIELD } from "@/lib/waitlist/constants";
 import styles from "./Modal.module.css";
 
 export function CollegeModal() {
@@ -65,6 +67,7 @@ export function CollegeModal() {
             <Select ariaLabel="Number of students" value={v.students} onChange={f.setValue("students")} options={STUDENT_COUNTS} />
           </label>
         </div>
+        <Honeypot value={v[HONEYPOT_FIELD]} onChange={f.set(HONEYPOT_FIELD)} />
         <label className="field-label">
           <span>
             Message <span className="field-optional">(optional)</span>

@@ -2,15 +2,15 @@
 
 import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { track } from "@/lib/analytics";
-import { postWaitlist, useSaansForm } from "@/lib/forms";
+import { postInterest, postWaitlist, useSaansForm } from "@/lib/forms";
 import { HONEYPOT_FIELD } from "@/lib/waitlist/constants";
 import { useUI } from "@/context/UIContext";
 
 export type ModalName = "waitlist" | "clinician" | "college" | "breath" | "help" | "film";
 
 const initWl = { email: "", role: "", country: "", struggles: "", survey: false, [HONEYPOT_FIELD]: "" };
-const initCp = { name: "", email: "", role: "", country: "", clients: "", note: "" };
-const initCc = { name: "", email: "", college: "", role: "", students: "", message: "" };
+const initCp = { name: "", email: "", role: "", country: "", clients: "", note: "", [HONEYPOT_FIELD]: "" };
+const initCc = { name: "", email: "", college: "", role: "", students: "", message: "", [HONEYPOT_FIELD]: "" };
 
 function useForms() {
   const wl = useSaansForm(initWl, {
@@ -19,8 +19,8 @@ function useForms() {
     event: "waitlist_submit",
     post: (v) => postWaitlist("modal", v),
   });
-  const cp = useSaansForm(initCp, { type: "clinician", required: ["name", "role"], event: "clinician_pilot_submit" });
-  const cc = useSaansForm(initCc, { type: "college", required: ["name", "college", "role"], event: "college_contact_submit" });
+  const cp = useSaansForm(initCp, { type: "clinician", required: ["name", "role"], event: "clinician_pilot_submit", post: (v) => postInterest("clinician", v) });
+  const cc = useSaansForm(initCc, { type: "college", required: ["name", "college", "role"], event: "college_contact_submit", post: (v) => postInterest("college", v) });
   return { wl, cp, cc };
 }
 export type Forms = ReturnType<typeof useForms>;

@@ -47,6 +47,12 @@ export type WaitlistRequest = {
   source: string;
 };
 
+/** A clinician or college form. Added as sent; an address can write in more than once. */
+export async function addInterest(table: "clinician_interest" | "college_interest", row: Record<string, unknown>) {
+  const { error, status } = await getClient().from(table).insert(row);
+  if (error) throw new WaitlistStoreError(error.code || "unknown", status);
+}
+
 async function call<T>(fn: string, args: Record<string, unknown>) {
   const { data, error, status } = await getClient().rpc(fn, args);
   if (error) throw new WaitlistStoreError(error.code || "unknown", status);

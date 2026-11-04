@@ -4,6 +4,8 @@ import { useModal } from "@/context/ModalContext";
 import { Icon } from "@/components/shared/Icon";
 import { CLIENT_COUNTS, CLINICIAN_ROLES, COUNTRY_OPTIONS } from "@/lib/content";
 import { Select } from "@/components/shared/Select";
+import { Honeypot } from "@/components/shared/Honeypot";
+import { HONEYPOT_FIELD } from "@/lib/waitlist/constants";
 import styles from "./Modal.module.css";
 
 export function ClinicianModal() {
@@ -55,6 +57,7 @@ export function ClinicianModal() {
             <Select ariaLabel="Country" value={v.country} onChange={f.setValue("country")} options={COUNTRY_OPTIONS} />
           </label>
         </div>
+        <Honeypot value={v[HONEYPOT_FIELD]} onChange={f.set(HONEYPOT_FIELD)} />
         <label className="field-label">
           <span>Number of active clients</span>
           <Select ariaLabel="Number of active clients" value={v.clients} onChange={f.setValue("clients")} options={CLIENT_COUNTS} />

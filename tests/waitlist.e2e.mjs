@@ -257,7 +257,7 @@ async function assertClean(label, { page, seen }, allowedStatus) {
 // ---------------------------------------------------------------- scenarios
 
 async function databaseAndPostgrest() {
-  for (const tableName of ["waitlist", "waitlist_pending"]) {
+  for (const tableName of ["waitlist", "waitlist_pending", "clinician_interest", "college_interest"]) {
     const table = (await db.query(`select relrowsecurity from pg_class where oid = 'public.${tableName}'::regclass`)).rows[0];
     check(`${tableName}: RLS is enabled`, table.relrowsecurity === true);
     const policies = await db.query(`select 1 from pg_policies where schemaname='public' and tablename=$1`, [tableName]);
@@ -344,6 +344,19 @@ async function databaseAndPostgrest() {
   check("the secret key has no delete privilege (least privilege)", !direct.ok, `${direct.status}`);
   const directPatch = await fetch(`${rest}?email=eq.${encodeURIComponent(sqlEmail)}`, { method: "PATCH", headers: { ...secretHeaders, "Content-Type": "application/json" }, body: JSON.stringify({ role: "hacked" }) });
   check("the secret key has no update privilege (least privilege)", !directPatch.ok, `${directPatch.status}`);
+  for (const table of ["clinician_interest", "college_interest"]) {
+    for (const [label, key] of anonKeys) {
+      const headers = { apikey: key, ...(key.startsWith("sb_") ? {} : { Authorization: `Bearer ${key}` }) };
+      const read = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=*`, { headers });
+      check(`${table}: ${label} cannot read`, [401, 403].includes(read.status), `${read.status}`);
+      const write = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, { method: "POST", headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify({ name: "x", email: newEmail("anon"), role: "x", ...(table === "college_interest" ? { college: "x" } : {}) }) });
+      check(`${table}: ${label} cannot add`, [401, 403].includes(write.status), `${write.status}`);
+    }
+    const del = await fetch(`${SUPABASE_URL}/rest/v1/${table}?email=eq.nobody@example.com`, { method: "DELETE", headers: secretHeaders });
+    check(`${table}: the secret key has no delete privilege`, !del.ok, `${del.status}`);
+    const upd = await fetch(`${SUPABASE_URL}/rest/v1/${table}?email=eq.nobody@example.com`, { method: "PATCH", headers: { ...secretHeaders, "Content-Type": "application/json" }, body: JSON.stringify({ name: "x" }) });
+    check(`${table}: the secret key has no update privilege`, !upd.ok, `${upd.status}`);
+  }
   const directPending = await fetch(`${SUPABASE_URL}/rest/v1/waitlist_pending?select=*`, { headers: secretHeaders });
   check("the secret key can't read unconfirmed requests directly", !directPending.ok, `${directPending.status}`);
 }
@@ -854,6 +867,168 @@ async function confirmRules() {
   check("a forged Host header never reaches the email's link", !forgedMail || !forgedMail.text.includes("evil.example"));
 }
 
+const interestRows = async (table, email) => (await db.query(`select * from public.${table} where email = $1`, [email])).rows;
+const INTEREST_NOTE = "e2e: notes pile up between sessions";
+
+/** The two forms behind "Want to tell us more?", opened the way a person does, then their rules. */
+async function interestForms(name) {
+  const label = (s) => `[${name}] ${s}`;
+
+  // clinician
+  {
+    const tab = await openPage(name, PORTS.main);
+    const { page, seen } = tab;
+    const email = newEmail(`clinician-${name}`);
+    await fillModal(page, { email: newEmail("unused"), role: "A clinician" });
+    await page.getByText("Want to tell us more?").click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByRole("heading", { name: "Join the SAANS Pro pilot." }).waitFor();
+    await dialog.locator('input[autocomplete="name"]').fill("E2E Clinician");
+    await dialog.locator('input[type="email"]').fill(email);
+    await dialog.getByRole("combobox", { name: "Role" }).click();
+    await page.getByRole("option", { name: "Psychologist", exact: true }).click();
+    await dialog.getByRole("combobox", { name: "Country" }).click();
+    await page.getByRole("option", { name: "India", exact: true }).click();
+    await dialog.getByRole("combobox", { name: "Number of active clients" }).click();
+    await page.getByRole("option", { name: "11–30", exact: true }).click();
+    await dialog.locator("textarea").fill(INTEREST_NOTE);
+    await page.screenshot({ path: path.join(SHOTS, `${name}-clinician-filled.png`) });
+    await dialog.getByRole("button", { name: "Request access" }).click();
+    await dialog.getByRole("heading", { name: "Thank you, we'll be in touch." }).waitFor();
+    const [row] = await interestRows("clinician_interest", email);
+    check(label("clinician form: saved with every field"), !!row && row.name === "E2E Clinician" && row.role === "Psychologist" && row.country === "India" && row.clients === "11–30" && row.note === INTEREST_NOTE && !!row.created_at);
+    const layer = JSON.stringify(await page.evaluate(() => window.dataLayer ?? []));
+    check(label("clinician form: analytics got the event and nothing they wrote"), layer.includes("clinician_pilot_submit") && !layer.includes("@") && !layer.includes(INTEREST_NOTE.slice(0, 12)));
+    check(label("clinician form: no email sent"), mailsTo(email).length === 0);
+    await assertClean(label("clinician form"), tab);
+    await tab.context.close();
+  }
+
+  // college
+  {
+    const tab = await openPage(name, PORTS.main);
+    const { page } = tab;
+    const email = newEmail(`college-${name}`);
+    await fillModal(page, { email: newEmail("unused"), role: "From a college" });
+    await page.getByText("Want to tell us more?").click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByRole("heading", { name: "Bring SAANS to your campus." }).waitFor();
+    await dialog.locator('input[autocomplete="name"]').fill("E2E Dean");
+    await dialog.locator('input[type="email"]').fill(email);
+    await dialog.locator('input[autocomplete="organization"]').fill("E2E University");
+    await dialog.getByRole("combobox", { name: "Your role" }).click();
+    await page.getByRole("option", { name: "Wellness office", exact: true }).click();
+    await dialog.getByRole("combobox", { name: "Number of students" }).click();
+    await page.getByRole("option", { name: "2,000–10,000", exact: true }).click();
+    await dialog.locator("textarea").fill(INTEREST_NOTE);
+    await page.screenshot({ path: path.join(SHOTS, `${name}-college-filled.png`) });
+    await dialog.getByRole("button", { name: "Send", exact: true }).click();
+    await dialog.getByRole("heading", { name: "Thanks. We'll reply within two working days." }).waitFor();
+    const [row] = await interestRows("college_interest", email);
+    check(label("college form: saved with every field"), !!row && row.name === "E2E Dean" && row.college === "E2E University" && row.role === "Wellness office" && row.students === "2,000–10,000" && row.message === INTEREST_NOTE);
+    await assertClean(label("college form"), tab);
+    await tab.context.close();
+  }
+
+  // required fields, caught in the browser
+  {
+    const tab = await openPage(name, PORTS.main);
+    const { page } = tab;
+    await fillModal(page, { email: newEmail("unused"), role: "A clinician" });
+    await page.getByText("Want to tell us more?").click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByRole("heading", { name: "Join the SAANS Pro pilot." }).waitFor();
+    await dialog.locator('input[type="email"]').fill("not-an-email");
+    await dialog.getByRole("button", { name: "Request access" }).click();
+    await dialog.getByRole("alert").waitFor();
+    check(label("clinician form: a bad email shows an error, no success"), (await dialog.getByRole("alert").textContent()) === ERR_EMAIL && (await dialog.getByRole("heading", { name: "Thank you, we'll be in touch." }).count()) === 0);
+    await tab.context.close();
+  }
+
+  // backend down: an honest error, never the old fake success
+  {
+    const tab = await openPage(name, PORTS.dead);
+    const { page } = tab;
+    const email = newEmail(`down-c-${name}`);
+    await fillModal(page, { email: newEmail("unused"), role: "A clinician" });
+    await page.getByText("Want to tell us more?").click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByRole("heading", { name: "Join the SAANS Pro pilot." }).waitFor();
+    await dialog.locator('input[autocomplete="name"]').fill("E2E Down");
+    await dialog.locator('input[type="email"]').fill(email);
+    await dialog.getByRole("combobox", { name: "Role" }).click();
+    await page.getByRole("option", { name: "Psychologist", exact: true }).click();
+    await dialog.getByRole("button", { name: "Request access" }).click();
+    await dialog.getByRole("alert").waitFor({ timeout: 20_000 });
+    const text = await dialog.getByRole("alert").textContent();
+    check(label("clinician form, backend down: error, not success"), text === "We couldn't send that just now. Please try again in a few minutes." && (await dialog.getByRole("heading", { name: "Thank you, we'll be in touch." }).count()) === 0, text);
+    await tab.context.close();
+  }
+}
+
+async function interestRules() {
+  const post = (body, opts = {}) => send(PORTS.main, { path: "/api/interest", body, ...opts });
+  const clinician = (email, extra) => ({ type: "clinician", name: "E2E", email, role: "Psychologist", ...extra });
+  const college = (email, extra) => ({ type: "college", name: "E2E", email, college: "E2E University", role: "Faculty", ...extra });
+
+  let email = newEmail("in-min");
+  let r = await post(clinician(email));
+  let [row] = await interestRows("clinician_interest", email);
+  check("clinician: only the required fields is enough, blanks stored as nothing", r.status === 200 && row?.country === null && row?.clients === null && row?.note === null, `${r.status}`);
+  email = newEmail("in-case");
+  r = await post(clinician(`  ${email.toUpperCase()}  `));
+  check("email is stored trimmed and lowercase", r.status === 200 && (await interestRows("clinician_interest", email)).length === 1, `${r.status}`);
+  r = await post(clinician(email));
+  check("writing in twice: same reply, both kept", r.status === 200 && r.text === '{"ok":true}' && (await interestRows("clinician_interest", email)).length === 2);
+  email = newEmail("in-hindi");
+  r = await post(college(email, { message: "न".repeat(2000) }));
+  check("college: 2,000 characters of Hindi fit", r.status === 200 && (await interestRows("college_interest", email))[0]?.message.length === 2000, `${r.status}`);
+
+  for (const [what, body] of [
+    ["unknown type", { type: "admin", name: "x", email: newEmail("in"), role: "x" }],
+    ["no type", { name: "x", email: newEmail("in"), role: "Faculty", college: "x" }],
+    ["no name", clinician(newEmail("in"), { name: "   " })],
+    ["bad email", clinician("nope")],
+    ["unknown role", clinician(newEmail("in"), { role: "Admin" })],
+    ["a college role on the clinician form", clinician(newEmail("in"), { role: "Dean or leadership" })],
+    ["unknown country", clinician(newEmail("in"), { country: "Atlantis" })],
+    ["unknown client count", clinician(newEmail("in"), { clients: "9000" })],
+    ["over-long note", clinician(newEmail("in"), { note: "x".repeat(2001) })],
+    ["no college", college(newEmail("in"), { college: "" })],
+    ["unknown student count", college(newEmail("in"), { students: "9000" })],
+    ["over-long message", college(newEmail("in"), { message: "x".repeat(2001) })],
+  ]) {
+    r = await post(body);
+    const stored = body.email && body.email !== "nope" ? (await interestRows("clinician_interest", body.email)).length + (await interestRows("college_interest", body.email)).length : 0;
+    check(`${what} is refused, nothing stored`, r.status === 400 && stored === 0 && !r.text.includes("Atlantis"), `${r.status}`);
+  }
+  for (const [what, body] of [["malformed JSON", "{nope"], ["JSON null", "null"], ["JSON array", "[]"]]) {
+    r = await post(body);
+    check(`interest: ${what} is refused`, r.status === 400, `${r.status}`);
+  }
+
+  email = newEmail("in-hp");
+  r = await post(clinician(email, { leave_blank: "http://spam.example" }));
+  check("interest: honeypot looks like success, stores nothing", r.status === 200 && (await interestRows("clinician_interest", email)).length === 0);
+  email = newEmail("in-origin");
+  r = await post(clinician(email), { headers: { origin: "https://evil.example" } });
+  check("interest: another website is refused", r.status === 403 && (await interestRows("clinician_interest", email)).length === 0, `${r.status}`);
+  r = await post(clinician(email), { noOrigin: true });
+  check("interest: missing Origin is refused", r.status === 403, `${r.status}`);
+  r = await post(clinician(email), { headers: { "content-type": "text/plain" } });
+  check("interest: non-JSON is refused", r.status === 415, `${r.status}`);
+  r = await post(clinician(email, { padding: "x".repeat(11_000) }));
+  check("interest: oversized body is refused", r.status === 413, `${r.status}`);
+  r = await send(PORTS.main, { method: "GET", path: "/api/interest" });
+  check("interest: GET is not allowed", r.status === 405, `${r.status}`);
+  const ip = uniqueIp();
+  const codes = [];
+  for (let i = 0; i < 21; i++) codes.push((await post({}, { headers: { "x-real-ip": ip } })).status);
+  check("interest: rate limited", codes.slice(0, 20).every((c) => c === 400) && codes[20] === 429, `21st: ${codes[20]}`);
+  r = await send(PORTS.noEnv, { path: "/api/interest", body: clinician(newEmail("in-noenv")) });
+  check("interest: missing env is an error, not success", r.status === 503, `${r.status}`);
+}
+
 async function backendFailure(name, port, what) {
   const tab = await openPage(name, port);
   const { page } = tab;
@@ -977,7 +1152,7 @@ function logsAreClean() {
   const text = logs.map((l) => l.text).join("\n").toLowerCase();
   const leaked = [...usedEmails].filter((e) => text.includes(e.toLowerCase()));
   check("server logs contain no submitted email", leaked.length === 0, `${usedEmails.size} addresses searched in ${text.length} bytes`);
-  check("server logs contain nothing people wrote", !text.includes(STRUGGLES_TEXT.toLowerCase()));
+  check("server logs contain nothing people wrote", !text.includes(STRUGGLES_TEXT.toLowerCase()) && !text.includes(INTEREST_NOTE.toLowerCase()));
   check("server logs contain no secret key", !text.includes(SUPABASE_SECRET_KEY.toLowerCase()) && !text.includes(TEST_RESEND_KEY.toLowerCase()));
   const tokens = mails.map(tokenOf).filter(Boolean);
   check("server logs contain no confirmation link", tokens.length > 0 && !tokens.some((t) => text.includes(t.toLowerCase())), `${tokens.length} tokens searched`);
@@ -1020,10 +1195,12 @@ try {
   await section("API abuse protection (raw HTTP)", apiAbuse);
   await section("Cross-origin from a real browser", crossOriginFromBrowser);
   await section("Confirmation rules", confirmRules);
+  await section("Clinician and college rules", interestRules);
   for (const name of Object.keys(VIEWPORTS)) {
     await section(`Modal and home page form at ${name} width`, () => modalFlows(name));
     await section(`Questions by audience at ${name} width`, () => questionsByRole(name));
     await section(`Confirmation journey at ${name} width`, () => confirmJourney(name));
+    await section(`Clinician and college forms at ${name} width`, () => interestForms(name));
     await section(`Backend problems at ${name} width`, async () => {
       await backendFailure(name, PORTS.dead, "dead Supabase URL");
       await backendFailure(name, PORTS.badKey, "wrong secret key");
@@ -1048,7 +1225,7 @@ try {
   for (const s of servers) s.kill();
   mailServer.close();
   let cleaned = 0;
-  for (const table of ["waitlist", "waitlist_pending"]) {
+  for (const table of ["waitlist", "waitlist_pending", "clinician_interest", "college_interest"]) {
     const del = await db
       .query(`delete from public.${table} where email like $1`, [`e2e-${runId}-%`])
       .catch((e) => console.error(`Cleanup failed: ${e.message}`));

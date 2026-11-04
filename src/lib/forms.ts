@@ -4,8 +4,8 @@ import { useCallback, useState } from "react";
 import { track, type AnalyticsEvent } from "./analytics";
 import type { WaitlistSource } from "./waitlist/constants";
 
-// README §9 "Forms". The waitlist forms POST to /api/waitlist (see `post` below).
-// The others POST JSON to one endpoint with a `type` field.
+// README §9 "Forms". The waitlist forms POST to /api/waitlist, the clinician and college forms to
+// /api/interest with a `type` field. Same-origin only: the browser never talks to Supabase.
 
 export type FormType = "user" | "clinician" | "college";
 export type FormStatus = "idle" | "sending" | "done";
@@ -15,7 +15,7 @@ export const ERR_REQUIRED = "Please fill in the required fields.";
 export const ERR_GENERIC = "Something went wrong. Please try again.";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-const WAITLIST_TIMEOUT_MS = 15_000;
+const POST_TIMEOUT_MS = 15_000;
 
 export function roleType(role: string): FormType {
   return role === "A clinician" ? "clinician" : role === "From a college" ? "college" : "user";
@@ -24,42 +24,38 @@ export function roleType(role: string): FormType {
 /** A failure whose message is written for the person filling in the form. */
 class FormSubmitError extends Error {}
 
-const WAITLIST_ERRORS: Record<number, string> = {
-  400: ERR_EMAIL,
-  429: "Too many attempts. Please wait a few minutes and try again.",
-  503: "We couldn't add you to the list just now. Please try again in a few minutes.",
-};
+const ERR_LIMIT = "Too many attempts. Please wait a few minutes and try again.";
 
-/** Same-origin only: the browser never talks to Supabase. */
-export async function postWaitlist(source: WaitlistSource, values: Values) {
+async function postJson(url: string, body: Record<string, unknown>, errors: Record<number, string>) {
   let r: Response;
   try {
-    r = await fetch("/api/waitlist", {
+    r = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...values, source }),
-      signal: AbortSignal.timeout(WAITLIST_TIMEOUT_MS),
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(POST_TIMEOUT_MS),
     });
   } catch {
     throw new FormSubmitError("We couldn't reach SAANS. Please check your connection and try again.");
   }
-  if (!r.ok) throw new FormSubmitError(WAITLIST_ERRORS[r.status] ?? ERR_GENERIC);
+  if (!r.ok) throw new FormSubmitError(errors[r.status] ?? ERR_GENERIC);
 }
 
-export async function postForm(type: FormType, data: Record<string, unknown>) {
-  const url = process.env.NEXT_PUBLIC_FORM_ENDPOINT;
-  const body = { type, ...data };
-  if (url) {
-    const r = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    if (!r.ok) throw new Error("bad");
-  } else {
-    // No endpoint configured: simulate success (same as the reference).
-    await new Promise((r) => setTimeout(r, 700));
-  }
+export function postWaitlist(source: WaitlistSource, values: Values) {
+  return postJson("/api/waitlist", { ...values, source }, {
+    400: ERR_EMAIL,
+    429: ERR_LIMIT,
+    503: "We couldn't add you to the list just now. Please try again in a few minutes.",
+  });
+}
+
+/** The clinician and college forms. */
+export function postInterest(type: "clinician" | "college", values: Values) {
+  return postJson("/api/interest", { ...values, type }, {
+    400: "Please check your details and try again.",
+    429: ERR_LIMIT,
+    503: "We couldn't send that just now. Please try again in a few minutes.",
+  });
 }
 
 type Values = Record<string, string | boolean>;
@@ -74,8 +70,7 @@ export function useSaansForm<T extends Values>(
     type: FormType | ((v: T) => FormType);
     required: (keyof T)[];
     event: AnalyticsEvent;
-    /** Replaces the default postForm. */
-    post?: (values: T) => Promise<void>;
+    post: (values: T) => Promise<void>;
   },
 ) {
   const [values, setValues] = useState<T>(initial);
@@ -114,7 +109,7 @@ export function useSaansForm<T extends Values>(
       setErr("");
       const type = typeof opts.type === "function" ? opts.type(values) : opts.type;
       try {
-        await (opts.post ? opts.post(values) : postForm(type, values));
+        await opts.post(values);
         setStatus("done");
         track(opts.event, { type });
       } catch (e) {
