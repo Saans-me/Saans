@@ -14,7 +14,13 @@ export function Footer() {
           <p className={styles.tag}>Someone to talk to, any hour. Real care when you need it.</p>
           <div className={styles.social}>
             {SOCIAL.map((s) => (
-              <a key={s.label} href={s.href} title={s.title} className={styles.socialLink}>
+              <a
+                key={s.label}
+                href={s.href}
+                title={s.title}
+                className={styles.socialLink}
+                {...(s.href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+              >
                 {s.label}
               </a>
             ))}

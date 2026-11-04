@@ -8,7 +8,7 @@ export const CONTACT_EMAIL = "admin@saans.me";
 export const SOCIAL = [
   { label: "X", href: "#", title: "[X link]" },
   { label: "Instagram", href: "#", title: "[Instagram link]" },
-  { label: "LinkedIn", href: "#", title: "[LinkedIn link]" },
+  { label: "LinkedIn", href: "https://www.linkedin.com/company/saansme", title: "SAANS on LinkedIn" },
 ];
 
 export type ForTab = {
