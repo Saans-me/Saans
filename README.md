@@ -9,12 +9,59 @@ Next.js 16 App Router · React 19 · TypeScript · CSS Modules · no UI framewor
 
 ```bash
 npm install
-cp .env.example .env.local   # optional: set NEXT_PUBLIC_FORM_ENDPOINT
+cp .env.example .env.local   # then fill in the values, see "Waitlist setup"
 npm run dev                  # http://localhost:3000
 npm run build && npm start   # production
 ```
 
-Without `NEXT_PUBLIC_FORM_ENDPOINT`, forms simulate success after 700 ms (same as the reference).
+The waitlist forms need Supabase. Until it is configured they show an error, never a fake success.
+The clinician and college forms are separate: without `NEXT_PUBLIC_FORM_ENDPOINT` they still simulate
+success after 700 ms and **send nothing anywhere**.
+
+## Waitlist setup
+
+The modal and the home page form both POST to the site's own `/api/waitlist`, which writes to the
+`public.waitlist` table with the secret key. The browser never talks to Supabase, and the table has RLS on
+with no policies and no privileges for `anon` or `authenticated`.
+
+**1. The table** is already created on the project. Its migration is kept out of this repo
+(`supabase/migrations/` is git-ignored), so a new project needs that file from the team, run once in the
+dashboard's SQL Editor.
+
+**2. Set the env vars** in the host's settings (and in `.env.local` for local runs):
+
+| Variable | Where to find it |
+|---|---|
+| `SUPABASE_URL` | Project Settings → Data API → Project URL |
+| `SUPABASE_SECRET_KEY` | Project Settings → API Keys → a secret key (`sb_secret_…`), or the legacy `service_role` key |
+| `TRUSTED_CLIENT_IP_HEADER` | Optional. Leave unset on Vercel. On Netlify: `x-nf-client-connection-ip` |
+
+The secret key bypasses RLS: keep it server-side and never give it a `NEXT_PUBLIC_` prefix.
+
+**Limits to know about:** rate limiting is in-memory, so on serverless each instance counts on its own
+(details in `src/lib/waitlist/rate-limit.ts`). To remove someone from the list, delete their row in the SQL
+Editor; the server's key deliberately can only read and insert.
+
+### Testing it
+
+`tests/waitlist.e2e.mjs` drives the real forms in a browser against a production build and a real database.
+Nothing is mocked. It needs Edge and `playwright-core` (paths at the top of the script, or set
+`WAITLIST_TEST_BROWSER` and `WAITLIST_TEST_PLAYWRIGHT_FROM`), free ports 3300–3304, and a git-ignored
+`.env.test.local`:
+
+```bash
+WAITLIST_TEST_DATABASE_URL=   # Postgres connection string (hosted: dashboard, Connect, Session pooler)
+WAITLIST_TEST_PUBLISHABLE_KEY= # publishable key (or WAITLIST_TEST_ANON_KEY on older projects), used to prove it is locked out
+```
+
+Local stack (needs Docker): `npx supabase start`, then `npx supabase status -o env` for all the values.
+`SUPABASE_URL` is `API_URL`, `SUPABASE_SECRET_KEY` is `SECRET_KEY`, and the database URL is `DB_URL`.
+
+```bash
+npm run build && npm run test:waitlist
+```
+
+Against a hosted project it writes only rows with a per-run `e2e-…@example.com` address and deletes those at the end.
 
 ## Pages
 
@@ -31,7 +78,7 @@ Without `NEXT_PUBLIC_FORM_ENDPOINT`, forms simulate success after 700 ms (same a
 
 ```
 src/
-  app/                 routes, layout (fonts, theme bootstrap, header/footer/modals), globals.css (tokens)
+  app/                 routes (api/waitlist is the signup endpoint), layout (fonts, theme bootstrap, header/footer/modals), globals.css (tokens)
   components/
     layout/            Header, MobileMenu, ThemeToggle, Footer, Providers
     home/              one component per home section
@@ -40,7 +87,7 @@ src/
     modals/            ModalShell + Waitlist, Clinician, College, Breath, Help, Film
   context/             Theme, Modal (+ form state), UI (For-you tab, menu), Toast
   hooks/               useReveal (reveal, count-up, bar grow, parallax), useBreath, useFocusTrap, useMediaQuery
-  lib/                 content.ts (all shared copy), forms.ts, analytics.ts
+  lib/                 content.ts (all shared copy), forms.ts, analytics.ts, waitlist/ (validation, rate limit, Supabase)
 ```
 
 ### How things work
@@ -50,7 +97,8 @@ src/
 - **Popups**: `useModal().open('waitlist' | 'clinician' | 'college' | 'breath' | 'help' | 'film')`, or
   `<ModalButton modal="…">` from server components. One `ModalShell` handles scrim, focus trap, Esc,
   focus return, scroll lock, enter/exit animation and the phone bottom sheet.
-- **Forms**: `lib/forms.ts` → single POST to `NEXT_PUBLIC_FORM_ENDPOINT` with `type: user | clinician | college`.
+- **Forms**: `lib/forms.ts`. Waitlist forms → `/api/waitlist` → Supabase (`lib/waitlist/`). Clinician and college
+  forms → single POST to `NEXT_PUBLIC_FORM_ENDPOINT` with `type: clinician | college`.
 - **Smooth scrolling**: Lenis (`components/layout/SmoothScroll.tsx`), paused under popups; off for reduced motion.
 - **Hero intro**: `[data-intro]` CSS in `globals.css`, started by the `<head>` script once the heading font is ready.
 - **Reveal motion**: any element with `data-reveal="up|scale|fade"` (+ `data-reveal-delay`) animates in once.
@@ -60,7 +108,7 @@ src/
 
 ## Before launch (placeholders)
 
-- `NEXT_PUBLIC_FORM_ENDPOINT` and `NEXT_PUBLIC_SITE_URL` (env vars)
+- `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `NEXT_PUBLIC_FORM_ENDPOINT` and `NEXT_PUBLIC_SITE_URL` (env vars)
 - The X / Instagram / LinkedIn links → `src/lib/content.ts`
 - Privacy policy and terms text
 - Film captions → put a `.vtt` in `public/film/` and set `FILM_CAPTIONS` in `src/components/modals/FilmModal.tsx`

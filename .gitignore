@@ -12,6 +12,7 @@
 
 # testing
 /coverage
+/tests/.artifacts/
 
 # next.js
 /.next/
@@ -43,3 +44,6 @@ next-env.d.ts
 
 # design handoff (reference HTML + assets) stays local
 /design_handoff/
+
+# database migrations stay local
+/supabase/migrations/

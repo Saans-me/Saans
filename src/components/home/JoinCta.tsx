@@ -3,18 +3,23 @@
 import { Icon } from "@/components/shared/Icon";
 import { LogoMark } from "@/components/shared/Logo";
 import { ROLE_OPTIONS } from "@/lib/content";
-import { roleType, useSaansForm } from "@/lib/forms";
+import { postWaitlist, roleType, useSaansForm } from "@/lib/forms";
 import { Select } from "@/components/shared/Select";
+import { Honeypot } from "@/components/shared/Honeypot";
+import { HONEYPOT_FIELD } from "@/lib/waitlist/constants";
 import styles from "./JoinCta.module.css";
 
+const INITIAL = { email: "", role: "", [HONEYPOT_FIELD]: "" };
+
 const FORM_OPTS = {
-  type: (v: { email: string; role: string }) => roleType(v.role as string),
+  type: (v: typeof INITIAL) => roleType(v.role),
   required: ["role" as const],
   event: "waitlist_submit" as const,
+  post: (v: typeof INITIAL) => postWaitlist("join_section", v),
 };
 
 export function JoinCta() {
-  const { values, set, setValue, submit, err, sending, done } = useSaansForm({ email: "", role: "" }, FORM_OPTS);
+  const { values, set, setValue, submit, err, sending, done } = useSaansForm(INITIAL, FORM_OPTS);
 
   return (
     <section id="join" data-screen-label="Join" className={`zoom-md ${styles.section}`}>
@@ -41,6 +46,7 @@ export function JoinCta() {
                 onChange={set("email")}
                 className={styles.email}
               />
+              <Honeypot value={values[HONEYPOT_FIELD]} onChange={set(HONEYPOT_FIELD)} />
               <div className={styles.role}>
                 <Select
                   ariaLabel="I am"

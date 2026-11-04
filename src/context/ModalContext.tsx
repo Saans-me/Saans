@@ -2,17 +2,23 @@
 
 import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { track } from "@/lib/analytics";
-import { useSaansForm } from "@/lib/forms";
+import { postWaitlist, useSaansForm } from "@/lib/forms";
+import { HONEYPOT_FIELD } from "@/lib/waitlist/constants";
 import { useUI } from "@/context/UIContext";
 
 export type ModalName = "waitlist" | "clinician" | "college" | "breath" | "help" | "film";
 
-const initWl = { email: "", role: "", country: "", survey: false };
+const initWl = { email: "", role: "", country: "", survey: false, [HONEYPOT_FIELD]: "" };
 const initCp = { name: "", email: "", role: "", country: "", clients: "", note: "" };
 const initCc = { name: "", email: "", college: "", role: "", students: "", message: "" };
 
 function useForms() {
-  const wl = useSaansForm(initWl, { type: "user", required: ["role"], event: "waitlist_submit" });
+  const wl = useSaansForm(initWl, {
+    type: "user",
+    required: ["role"],
+    event: "waitlist_submit",
+    post: (v) => postWaitlist("modal", v),
+  });
   const cp = useSaansForm(initCp, { type: "clinician", required: ["name", "role"], event: "clinician_pilot_submit" });
   const cc = useSaansForm(initCc, { type: "college", required: ["name", "college", "role"], event: "college_contact_submit" });
   return { wl, cp, cc };

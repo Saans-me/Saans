@@ -6,6 +6,8 @@ import { Icon } from "@/components/shared/Icon";
 import { SurveyLink } from "@/components/shared/Actions";
 import { COUNTRY_OPTIONS, ROLE_OPTIONS } from "@/lib/content";
 import { Select } from "@/components/shared/Select";
+import { Honeypot } from "@/components/shared/Honeypot";
+import { HONEYPOT_FIELD } from "@/lib/waitlist/constants";
 import styles from "./Modal.module.css";
 
 export function WaitlistModal() {
@@ -91,6 +93,7 @@ export function WaitlistModal() {
           <input type="checkbox" checked={!!v.survey} onChange={f.set("survey")} />
           I&apos;d also like to answer a 3-minute survey
         </label>
+        <Honeypot value={v[HONEYPOT_FIELD]} onChange={f.set(HONEYPOT_FIELD)} />
         {f.err && (
           <p role="alert" className="form-error">
             {f.err}
