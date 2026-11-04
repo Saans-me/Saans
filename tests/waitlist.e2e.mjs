@@ -271,7 +271,7 @@ async function databaseAndPostgrest() {
       check(`${tableName}: ${role} holds no privileges`, rows[0].any_priv === false);
     }
   }
-  for (const fn of ["waitlist_request(text,text,text,text,boolean,text,text)", "waitlist_cancel(text)", "waitlist_confirm(text)"]) {
+  for (const fn of ["waitlist_request(text,text,text,text,boolean,text,text)", "waitlist_cancel(text)", "waitlist_confirm(text)", "waitlist_claim_already_notice(text)"]) {
     const { rows } = await db.query(
       `select has_function_privilege('anon', 'public.${fn}', 'execute') as anon, has_function_privilege('authenticated', 'public.${fn}', 'execute') as auth, has_function_privilege('service_role', 'public.${fn}', 'execute') as server`,
     );
@@ -744,7 +744,25 @@ async function confirmRules() {
   const before = (await listedFor(email))[0];
   let r = await join(email, { role: "A clinician", country: "Other" });
   const after = (await listedFor(email))[0];
-  check("joining again once confirmed: same reply, no email, nothing changes", r.status === 200 && r.text === '{"ok":true}' && mailsTo(email).length === 1 && (await rowsFor(email)).length === 0 && after.role === before.role && after.country === before.country);
+  check("joining again once confirmed: same reply, nothing changes", r.status === 200 && r.text === '{"ok":true}' && (await rowsFor(email)).length === 0 && after.role === before.role && after.country === before.country);
+  const notice = mailsTo(email)[1];
+  check("… and a note goes to that inbox only", mailsTo(email).length === 2 && notice.subject === "You're already on the SAANS waitlist" && !tokenOf(notice), `${mailsTo(email).length} email(s)`);
+  check("… which says nothing about why they joined", !/hard|struggl|mental/i.test(notice.subject + notice.text) && !notice.text.includes(ROLE));
+  await join(email);
+  await join(email);
+  check("… at most one a day", mailsTo(email).length === 2, `${mailsTo(email).length} email(s)`);
+  await db.query("update public.waitlist set already_notified_at = already_notified_at - interval '25 hours' where email = $1", [email]);
+  await join(email);
+  check("… and another the next day", mailsTo(email).length === 3 && !tokenOf(mailsTo(email)[2]), `${mailsTo(email).length} email(s)`);
+
+  const failing = newEmail("noticefail");
+  await join(failing);
+  await confirm(tokenOf(mailsTo(failing)[0]));
+  mailFailures = 1;
+  r = await join(failing);
+  check("a failed note still answers like everyone else", r.status === 200 && r.text === '{"ok":true}', `${r.status}`);
+  const stillThere = await listedFor(failing);
+  check("… and the signup is untouched", stillThere.length === 1 && !!stillThere[0].confirmed_at);
 
   // someone types a stranger's address first
   email = newEmail("squat");

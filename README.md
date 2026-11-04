@@ -23,10 +23,11 @@ success after 700 ms and **send nothing anywhere**.
 The modal and the home page form both POST to the site's own `/api/waitlist`. It stores the request in
 `public.waitlist_pending` and emails a confirmation link through Resend. Pressing the button on that link's
 page moves the person into `public.waitlist`, so that table holds only confirmed addresses. Unconfirmed
-requests are deleted after 7 days.
+requests are deleted after 7 days. Someone already confirmed who fills in the form again sees the same
+screen as anyone else, and gets a short "you're already on the list" email, at most one a day.
 
 The browser never talks to Supabase. Both tables have RLS on with no policies and no privileges for `anon` or
-`authenticated`, and the server changes them only through three database functions.
+`authenticated`, and the server changes them only through database functions.
 
 **1. The table** is already created on the project. Its migration is kept out of this repo
 (`supabase/migrations/` is git-ignored), so a new project needs that file from the team, run once in the

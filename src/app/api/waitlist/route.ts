@@ -1,9 +1,9 @@
 import { HONEYPOT_FIELD } from "@/lib/waitlist/constants";
-import { assertMailConfigured, newToken, sendConfirmEmail, WaitlistEmailError } from "@/lib/waitlist/email";
+import { assertMailConfigured, newToken, sendAlreadyOnListEmail, sendConfirmEmail, WaitlistEmailError } from "@/lib/waitlist/email";
 import { failed, isSameOrigin, readBody, reply } from "@/lib/waitlist/http";
 import { waitlistSchema } from "@/lib/waitlist/schema";
 import { clientIp, isRateLimited } from "@/lib/waitlist/rate-limit";
-import { cancelSignup, requestSignup, WaitlistConfigError, WaitlistStoreError } from "@/lib/waitlist/server";
+import { cancelSignup, claimAlreadyNotice, requestSignup, WaitlistConfigError, WaitlistStoreError } from "@/lib/waitlist/server";
 
 // Room for the longest answer in any script: 1,000 characters can be 4,000 bytes.
 const MAX_BODY_BYTES = 6_144;
@@ -68,6 +68,15 @@ export async function POST(req: Request) {
     // Never leave a request behind that no email went out for: it would block a retry.
     if (stored) await cancelSignup(tokenHash).catch(() => console.error("[waitlist] could not cancel a failed request"));
     return failed(503, "unavailable");
+  }
+  // Already on the list, or emailed recently. Their signup is safe, so a problem here is only logged: an
+  // error on screen would show that this address is different from a new one.
+  if (!stored) {
+    try {
+      if (await claimAlreadyNotice(email)) await sendAlreadyOnListEmail(email);
+    } catch (e) {
+      console.error(`[waitlist] already-on-list notice failed (${e instanceof WaitlistEmailError || e instanceof WaitlistStoreError ? e.message : e instanceof Error ? e.name : "unknown"})`);
+    }
   }
   return accepted();
 }

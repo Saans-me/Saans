@@ -70,6 +70,11 @@ export function requestSignup(r: WaitlistRequest, tokenHash: string) {
   });
 }
 
+/** True when an already-confirmed address should get today's "you're already on the list" email. */
+export function claimAlreadyNotice(email: string) {
+  return call<boolean>("waitlist_claim_already_notice", { p_email: email });
+}
+
 /** The email couldn't be sent: forget the request, so the person can try again straight away. */
 export function cancelSignup(tokenHash: string) {
   return call<void>("waitlist_cancel", { p_token_hash: tokenHash });
