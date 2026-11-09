@@ -6,7 +6,7 @@ export const SURVEY_URL =
 export const CONTACT_EMAIL = "admin@saans.me";
 
 export const SOCIAL = [
-  { label: "X", href: "#", title: "[X link]" },
+  { label: "X", href: "https://x.com/saans_me", title: "SAANS on X" },
   { label: "Instagram", href: "#", title: "[Instagram link]" },
   { label: "LinkedIn", href: "https://www.linkedin.com/company/saansme", title: "SAANS on LinkedIn" },
 ];
