@@ -10,7 +10,7 @@ export function FaqPage() {
     <section data-screen-label="FAQ" className={inner.hero}>
       <div className={`container ${styles.wrap}`}>
         <h1 data-reveal="up" data-reveal-delay="60" className={`${inner.h1} ${styles.h1}`}>
-          Questions
+          Questions about SAANS
         </h1>
         <div data-reveal="up" data-reveal-delay="120" className={styles.list}>
           <Faq />

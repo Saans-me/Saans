@@ -1,0 +1,20 @@
+# SAANS
+
+> SAANS is an AI companion for mental wellbeing. It listens any hour, by text or voice, in English, Hindi or Hinglish, learns what helps you, and connects you to a real psychologist or psychiatrist when you need more. SAANS is not a therapist and not a medical or emergency service. It is not open yet: people can join the waitlist at https://saans.me.
+
+Key facts:
+
+- Who it is for: people who feel alone, people who are not okay but are not ready to see a doctor, and people who need a clinician fast. There are also tools for clinicians (SAANS Pro) and for colleges (SAANS Campus).
+- Languages: English, Hindi and Hinglish, by text or voice.
+- Privacy: only the person sees their conversations. A therapist sees only what the person chooses to share. A college sees anonymous totals for groups of 10 or more, never names. Data is never sold, is encrypted, and can be deleted in one tap.
+- In a crisis: SAANS shows helplines right away and, if the person has allowed it, messages someone they trust. Anyone in danger should call their local emergency number (112 in India).
+- Price: starting free. A premium plan and professional sessions will be paid; prices will be shared before launch.
+- Contact: admin@saans.me
+
+## Pages
+
+- [Home](https://saans.me/): what SAANS does for individuals, clinicians and colleges
+- [FAQ](https://saans.me/faq): is it a therapist, when it opens, languages, who sees conversations, crises, cost
+- [Privacy and safety](https://saans.me/privacy): what SAANS collects and why, who sees what, safety promises
+- [Get help now](https://saans.me/help): free crisis helplines in India (112, Tele-MANAS 14416, iCall) and abroad (988, Samaritans 116 123)
+- [About](https://saans.me/about): why SAANS exists and the team behind it

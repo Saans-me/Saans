@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/pages/LegalPage";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+// noindex until the real text replaces the placeholder: a thin legal page hurts trust on a health site.
+export const metadata: Metadata = pageMetadata({
+  path: "/terms",
   title: "Terms · SAANS",
   description: "The SAANS terms of use.",
-  alternates: { canonical: "/terms" },
-};
+  noindex: true,
+});
 
 export default function Page() {
   return (

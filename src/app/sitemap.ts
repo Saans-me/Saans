@@ -1,8 +1,11 @@
 import type { MetadataRoute } from "next";
+import { CONTENT_UPDATED, SITE_URL } from "@/lib/seo";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://saans.me";
-const ROUTES = ["", "/privacy", "/help", "/about", "/faq", "/privacy-policy", "/terms"];
-
+// Only pages worth indexing. /privacy-policy and /terms return once their real text replaces the placeholder.
 export default function sitemap(): MetadataRoute.Sitemap {
-  return ROUTES.map((r) => ({ url: `${SITE_URL}${r}`, changeFrequency: "monthly", priority: r === "" ? 1 : 0.7 }));
+  return Object.entries(CONTENT_UPDATED).map(([path, updated]) => ({
+    url: `${SITE_URL}${path === "/" ? "" : path}`,
+    // Google and Bing read lastmod (when it is accurate) and ignore priority and changefreq.
+    lastModified: updated,
+  }));
 }

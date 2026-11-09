@@ -6,6 +6,7 @@ import { Footer } from "@/components/layout/Footer";
 import { ModalShell } from "@/components/modals/ModalShell";
 import { themeBootstrapScript } from "@/context/ThemeContext";
 import "lenis/dist/lenis.css";
+import { ORG_DESCRIPTION, SITE_URL } from "@/lib/seo";
 import "./globals.css";
 
 const comfortaa = Comfortaa({
@@ -22,24 +23,18 @@ const manrope = Manrope({
   variable: "--font-manrope",
 });
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://saans.me";
-
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
     default: "SAANS · Everyone deserves someone to talk to",
     template: "%s",
   },
-  description:
-    "SAANS listens any hour, by text or voice, in English, Hindi or Hinglish. It learns what helps you, and when you need more, connects you to a real professional.",
-  openGraph: {
-    type: "website",
-    siteName: "SAANS",
-    title: "SAANS · Everyone deserves someone to talk to",
-    description: "An AI companion that knows when to bring in a human.",
-    // og:image comes from src/app/opengraph-image.tsx (1200×630).
-  },
+  description: ORG_DESCRIPTION,
+  applicationName: "SAANS",
+  // Pages set their own title, description, canonical and social cards through pageMetadata() in lib/seo.ts.
+  openGraph: { type: "website", siteName: "SAANS", locale: "en_IN" },
   twitter: { card: "summary_large_image" },
+  formatDetection: { telephone: false },
 };
 
 export const viewport: Viewport = {
@@ -53,7 +48,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" data-theme="dark" suppressHydrationWarning className={`${comfortaa.variable} ${manrope.variable}`}>
+    <html lang="en-IN" data-theme="dark" suppressHydrationWarning className={`${comfortaa.variable} ${manrope.variable}`}>
       <head>
         {/* Sets data-theme before hydration so there is no flash of the wrong theme (README §4). */}
         <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />

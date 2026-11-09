@@ -6,7 +6,7 @@ import styles from "./AboutPage.module.css";
 
 const PROMISE = ["Always private", "Always honest about its limits", "Always in your language"];
 
-const TEAM: { id: string; name: string; role: string; line: string; photo: string }[] = [
+export const TEAM: { id: string; name: string; role: string; line: string; photo: string }[] = [
   { id: "team-1", name: "Divyansh", role: "CEO", line: "FDE @ Vanna Protocol", photo: "/team/divyansh-portrait.webp" },
   { id: "team-2", name: "Arshdeep", role: "Co-founder", line: "Software Engineer @ JA Assure", photo: "/team/arshdeep-portrait.webp" },
   { id: "team-3", name: "Advay", role: "Co-founder", line: "SDE @ Vanna Protocol", photo: "/team/advay-portrait.webp" },

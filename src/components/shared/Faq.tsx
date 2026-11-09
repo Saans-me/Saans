@@ -27,7 +27,7 @@ export function Faq({
         const id = `${idPrefix}${i}`;
         return (
           <div key={id} className={styles.item}>
-            <h3 className={styles.heading}>
+            <h2 className={styles.heading}>
               <button
                 type="button"
                 className={styles.button}
@@ -40,7 +40,7 @@ export function Faq({
                   <Icon name="plus" size={16} strokeWidth={2.4} />
                 </span>
               </button>
-            </h3>
+            </h2>
             <div id={id} className={styles.panel} data-open={isOpen || undefined}>
               <div className={styles.clip}>
                 <p className={styles.answer}>{a}</p>
